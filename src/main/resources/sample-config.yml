@@ -203,6 +203,13 @@ bentobox:
   # When enabled, shops in locked islands will be ignored from search results
   ignore-locked-island-shops: true
 
+# GriefPrevention plugin integration settings
+# These settings only take effect if GriefPrevention plugin is installed and enabled
+griefprevention:
+  # When enabled, shops in claims where the searching player is banned will be ignored from search results
+  # This respects the /claimban command - if a player is banned from a claim, they won't see shops in that claim
+  ignore-shops-where-player-banned: true
+
 # Below materials will not show up in auto-complete, nor will be allowed during shop search
 # Full materials list can be found here: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html
 blacklisted-materials:

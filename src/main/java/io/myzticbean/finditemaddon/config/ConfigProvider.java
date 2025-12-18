@@ -41,6 +41,7 @@ public class ConfigProvider {
     private static final String SHOP_GUI_NAVIGATION = "shop-navigation.";
     private static final String SHOP_GUI_CMD = "custom-model-data.";
     private static final String BENTOBOX = "bentobox.";
+    private static final String GRIEFPREVENTION = "griefprevention.";
     public final String PLUGIN_PREFIX = ColorTranslator.translateColorCodes(ConfigSetup.get().getString("plugin-prefix"));
     public final List<String> FIND_ITEM_COMMAND_ALIAS = (List<String>) ConfigSetup.get().getList(FIND_ITEM_COMMAND + "command-alias");
     public final String FIND_ITEM_TO_BUY_AUTOCOMPLETE = ConfigSetup.get().getString(FIND_ITEM_COMMAND + "to-buy-autocomplete");
@@ -109,6 +110,7 @@ public class ConfigProvider {
     public final boolean DEBUG_MODE = ConfigSetup.get().getBoolean("debug-mode");
     public final int CONFIG_VERSION = ConfigSetup.get().getInt("config-version");
     public final boolean BENTOBOX_IGNORE_LOCKED_ISLAND_SHOPS = ConfigSetup.get().getBoolean(BENTOBOX + "ignore-locked-island-shops");
+    public final boolean GRIEFPREVENTION_IGNORE_SHOPS_IN_BANNED_CLAIMS = ConfigSetup.get().getBoolean(GRIEFPREVENTION + "ignore-shops-where-player-banned");
 
     private final List<World> blacklistedWorldsList = new ArrayList<>();
     private final List<Material> blacklistedMaterialsList = new ArrayList<>();

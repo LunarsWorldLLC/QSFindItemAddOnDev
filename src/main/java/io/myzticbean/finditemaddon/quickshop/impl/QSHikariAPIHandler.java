@@ -463,7 +463,14 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
                  FindItemAddOn.getBentoboxPlugin().isIslandLocked(shopIterator.getLocation(), searchingPlayer)) {
                  Logger.logDebugInfo("Shop is in locked BentoBox island - ignoring");
             return;
-            }
+        }
+        // Check if player is banned from the GriefPrevention claim
+        if (FindItemAddOn.getConfigProvider().GRIEFPREVENTION_IGNORE_SHOPS_IN_BANNED_CLAIMS &&
+                FindItemAddOn.getGriefPreventionPlugin() != null &&
+                FindItemAddOn.getGriefPreventionPlugin().isPlayerBannedFromClaim(shopIterator.getLocation(), searchingPlayer)) {
+            Logger.logDebugInfo("Player is banned from claim containing shop - ignoring");
+            return;
+        }
         // check for stock / space
         int stockOrSpace = (toBuy ? getRemainingStockOrSpaceFromShopCache(shopIterator, true)
                 : getRemainingStockOrSpaceFromShopCache(shopIterator, false));

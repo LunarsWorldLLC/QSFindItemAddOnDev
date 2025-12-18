@@ -90,6 +90,8 @@ shop-player-visit-cooldown-in-minutes: 5
 ignore-empty-chests: true
 bentobox:
   ignore-locked-island-shops: true
+griefprevention:
+  ignore-shops-where-player-banned: true
 blacklisted-worlds:
   - "world_number_1"
   - "world_number_2"
