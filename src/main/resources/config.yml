@@ -90,6 +90,15 @@ shop-player-visit-cooldown-in-minutes: 5
 ignore-empty-chests: true
 bentobox:
   ignore-locked-island-shops: true
+# GriefPrevention + GPFlags integration
+# When enabled, shops inside claims with NoEntry or NoEnterPlayer flags will be hidden
+# from players who don't have access to those claims
+griefprevention:
+  ignore-shops-in-locked-claims: true
+# CosmosCore integration
+# When enabled, shops inside claims where the searching player is banned will be hidden
+cosmoscore:
+  ignore-shops-in-banned-claims: true
 blacklisted-worlds:
   - "world_number_1"
   - "world_number_2"
