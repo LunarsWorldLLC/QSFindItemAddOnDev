@@ -102,13 +102,17 @@ public class CmdExecutorHandler {
                 // If QS Hikari installed and Shop Cache feature available (>6), then run in async thread (Fix for Issue #12)
                 if(!FindItemAddOn.isQSReremakeInstalled() && FindItemAddOn.getQsApiInstance().isQSShopCacheImplemented()) {
                     VirtualThreadScheduler.runTaskAsync(() -> {
-                        List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnTypeFromAllShops(new ItemStack(mat), isBuying, player);
-                        this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
+                        try {
+                            List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnTypeFromAllShops(new ItemStack(mat), isBuying, player);
+                            this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
+                        } catch (Exception e) {
+                            Logger.logError("Error during shop search: " + e.getMessage());
+                            e.printStackTrace();
+                            Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                            });
+                        }
                     });
-//                    Bukkit.getScheduler().runTaskAsynchronously(FindItemAddOn.getInstance(), () -> {
-//                        List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnTypeFromAllShops(new ItemStack(mat), isBuying, player);
-//                        this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
-//                    });
                 } else {
                     List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnTypeFromAllShops(new ItemStack(mat), isBuying, player);
                     this.openShopMenu(player, searchResultList, false, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
@@ -118,13 +122,17 @@ public class CmdExecutorHandler {
                 // If QS Hikari installed and Shop Cache feature available (>6), then run in async thread (Fix for Issue #12)
                 if(!FindItemAddOn.isQSReremakeInstalled() && FindItemAddOn.getQsApiInstance().isQSShopCacheImplemented()) {
                     VirtualThreadScheduler.runTaskAsync(() -> {
-                        List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnDisplayNameFromAllShops(itemArg, isBuying, player);
-                        this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().FIND_ITEM_CMD_INVALID_MATERIAL_MSG);
+                        try {
+                            List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnDisplayNameFromAllShops(itemArg, isBuying, player);
+                            this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().FIND_ITEM_CMD_INVALID_MATERIAL_MSG);
+                        } catch (Exception e) {
+                            Logger.logError("Error during shop search: " + e.getMessage());
+                            e.printStackTrace();
+                            Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                            });
+                        }
                     });
-//                    Bukkit.getScheduler().runTaskAsynchronously(FindItemAddOn.getInstance(), () -> {
-//                        List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnDisplayNameFromAllShops(itemArg, isBuying, player);
-//                        this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().FIND_ITEM_CMD_INVALID_MATERIAL_MSG);
-//                    });
                 } else {
                     List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findItemBasedOnDisplayNameFromAllShops(itemArg, isBuying, player);
                     this.openShopMenu(player, searchResultList, false, FindItemAddOn.getConfigProvider().FIND_ITEM_CMD_INVALID_MATERIAL_MSG);

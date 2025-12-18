@@ -463,7 +463,25 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
                  FindItemAddOn.getBentoboxPlugin().isIslandLocked(shopIterator.getLocation(), searchingPlayer)) {
                  Logger.logDebugInfo("Shop is in locked BentoBox island - ignoring");
             return;
+        }
+        // Check if shop is in a GriefPrevention claim with NoEntry/NoEnterPlayer flags
+        if (FindItemAddOn.getConfigProvider().GRIEFPREVENTION_IGNORE_LOCKED_CLAIMS &&
+                FindItemAddOn.getGriefPreventionPlugin() != null) {
+            Logger.logDebugInfo("Checking GP lock status for shop at " + shopIterator.getLocation());
+            boolean isDenied = FindItemAddOn.getGriefPreventionPlugin().isPlayerDeniedEntry(shopIterator.getLocation(), searchingPlayer);
+            Logger.logDebugInfo("GP check result for shop: isDenied=" + isDenied);
+            if (isDenied) {
+                Logger.logDebugInfo("Shop is in locked GriefPrevention claim - ignoring");
+                return;
             }
+        }
+        // Check if shop is in a CosmosCore claim where player is banned
+        if (FindItemAddOn.getConfigProvider().COSMOSCORE_IGNORE_BANNED_CLAIMS &&
+                FindItemAddOn.getCosmosCorePlugin() != null &&
+                FindItemAddOn.getCosmosCorePlugin().isPlayerBannedFromClaim(shopIterator.getLocation(), searchingPlayer)) {
+            Logger.logDebugInfo("Shop is in CosmosCore claim where player is banned - ignoring");
+            return;
+        }
         // check for stock / space
         int stockOrSpace = (toBuy ? getRemainingStockOrSpaceFromShopCache(shopIterator, true)
                 : getRemainingStockOrSpaceFromShopCache(shopIterator, false));
@@ -483,5 +501,6 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
                 shopIterator.getItem(),
                 toBuy
         ));
+        Logger.logDebugInfo("Shop added to results list. Total shops found so far: " + shopsFoundList.size());
     }
 }

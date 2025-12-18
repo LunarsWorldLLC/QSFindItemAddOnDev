@@ -30,6 +30,8 @@ import io.myzticbean.finditemaddon.dependencies.PlayerWarpsPlugin;
 import io.myzticbean.finditemaddon.dependencies.ResidencePlugin;
 import io.myzticbean.finditemaddon.dependencies.WGPlugin;
 import io.myzticbean.finditemaddon.dependencies.BentoBoxPlugin;
+import io.myzticbean.finditemaddon.dependencies.GriefPreventionPlugin;
+import io.myzticbean.finditemaddon.dependencies.CosmosCorePlugin;
 import io.myzticbean.finditemaddon.handlers.gui.PlayerMenuUtility;
 import io.myzticbean.finditemaddon.listeners.*;
 import io.myzticbean.finditemaddon.metrics.Metrics;
@@ -103,6 +105,10 @@ public final class FindItemAddOn extends JavaPlugin {
     private static QSApi qsApi;
     @Getter
     private static BentoBoxPlugin bentoboxPlugin;
+    @Getter
+    private static GriefPreventionPlugin griefPreventionPlugin;
+    @Getter
+    private static CosmosCorePlugin cosmosCorePlugin;
 
     private static final HashMap<Player, PlayerMenuUtility> playerMenuUtilityMap = new HashMap<>();
 
@@ -133,6 +139,9 @@ public final class FindItemAddOn extends JavaPlugin {
                 Logger.logWarning("You have " + Math.abs(duration.toDays()) + " days remaining in your trial.");
             }
         }
+
+        // Initialize virtual thread executor (supports PlugMan reloads)
+        VirtualThreadScheduler.init();
 
         if(!Bukkit.getPluginManager().isPluginEnabled("QuickShop")
                 && !Bukkit.getPluginManager().isPluginEnabled("QuickShop-Hikari")) {
@@ -213,6 +222,8 @@ public final class FindItemAddOn extends JavaPlugin {
         WGPlugin.setup();
         ResidencePlugin.setup();
         bentoboxPlugin = new BentoBoxPlugin();
+        griefPreventionPlugin = new GriefPreventionPlugin();
+        cosmosCorePlugin = new CosmosCorePlugin();
 
         initExternalPluginEventListeners();
 
