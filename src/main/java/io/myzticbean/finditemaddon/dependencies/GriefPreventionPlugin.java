@@ -181,7 +181,8 @@ public class GriefPreventionPlugin {
                 () -> checkGPFlagsOnMainThread(location, claim, player)
             );
             // 5 second timeout to prevent hanging forever
-            return future.get(5, TimeUnit.SECONDS);
+            Boolean result = future.get(5, TimeUnit.SECONDS);
+            return result != null && result;
         } catch (TimeoutException e) {
             Logger.logWarning("GPFlags check timed out for claim " + claim.getID());
             return false;
@@ -190,54 +191,69 @@ public class GriefPreventionPlugin {
             Logger.logDebugInfo("GPFlags check interrupted for claim " + claim.getID());
             return false;
         } catch (ExecutionException e) {
-            Logger.logError("Error during GPFlags sync check: " + e.getCause().getMessage());
+            Logger.logDebugInfo("Error during GPFlags sync check: " +
+                (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+            return false;
+        } catch (Exception e) {
+            Logger.logDebugInfo("Unexpected error during GPFlags check: " + e.getMessage());
             return false;
         }
     }
 
     /**
      * Check GPFlags on the main thread. Must only be called from main thread.
+     * Uses getFlags(claim) for compatibility with older GPFlags versions.
      */
     private boolean checkGPFlagsOnMainThread(Location location, Claim claim, Player player) {
         boolean isLocked = false;
 
-        // Check NoEntry flag (blocks all non-trusted players)
         try {
-            Logger.logDebugInfo("Checking NoEnter flag...");
-            Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
-            Logger.logDebugInfo("NoEnter flag result: " + (noEntryFlag != null ? "found (set=" + noEntryFlag.getSet() + ")" : "null"));
-            if (noEntryFlag != null && noEntryFlag.getSet()) {
-                // NoEntry flag is set - check if player has access (trusted players can still enter)
-                String accessError = claim.allowAccess(player);
-                if (accessError != null) {
-                    Logger.logDebugInfo("NoEnter flag blocks player " + player.getName());
-                    isLocked = true;
-                }
+            // Get all flags for this claim - more compatible with different GPFlags versions
+            java.util.Collection<Flag> claimFlags = flagManager.getFlags(claim);
+            if (claimFlags == null || claimFlags.isEmpty()) {
+                Logger.logDebugInfo("No flags found for claim " + claim.getID());
+                return false;
             }
-        } catch (Exception e) {
-            Logger.logDebugInfo("Error checking NoEnter flag: " + e.getMessage());
-        }
 
-        // Check NoEnterPlayer flag (blocks specific players by name in parameters)
-        if (!isLocked) {
-            try {
-                Logger.logDebugInfo("Checking NoEnterPlayer flag...");
-                Flag noEnterPlayerFlag = flagManager.getEffectiveFlag(location, "NoEnterPlayer", claim);
-                if (noEnterPlayerFlag != null && noEnterPlayerFlag.getSet()) {
-                    // Check if player's name is in the flag parameters
-                    String params = noEnterPlayerFlag.parameters;
+            Logger.logDebugInfo("Found " + claimFlags.size() + " flags for claim " + claim.getID());
+
+            for (Flag flag : claimFlags) {
+                if (flag == null || !flag.getSet()) {
+                    continue;
+                }
+
+                String flagName = flag.flagDefinition != null ? flag.flagDefinition.getName() : null;
+                if (flagName == null) {
+                    continue;
+                }
+
+                Logger.logDebugInfo("Checking flag: " + flagName);
+
+                // Check NoEnter flag (blocks all non-trusted players)
+                if ("NoEnter".equalsIgnoreCase(flagName)) {
+                    String accessError = claim.allowAccess(player);
+                    if (accessError != null) {
+                        Logger.logDebugInfo("NoEnter flag blocks player " + player.getName());
+                        isLocked = true;
+                        break;
+                    }
+                }
+
+                // Check NoEnterPlayer flag (blocks specific players by name)
+                if ("NoEnterPlayer".equalsIgnoreCase(flagName)) {
+                    String params = flag.parameters;
                     if (params != null && params.toUpperCase().contains(player.getName().toUpperCase())) {
-                        // Also check if player has access
                         String accessError = claim.allowAccess(player);
                         if (accessError != null) {
                             Logger.logDebugInfo("NoEnterPlayer flag blocks player " + player.getName());
                             isLocked = true;
+                            break;
                         }
                     }
                 }
-            } catch (Exception e) {
-                Logger.logDebugInfo("Error checking NoEnterPlayer flag: " + e.getMessage());
             }
+        } catch (Exception e) {
+            Logger.logDebugInfo("Error checking GPFlags: " + e.getMessage());
         }
 
         return isLocked;
