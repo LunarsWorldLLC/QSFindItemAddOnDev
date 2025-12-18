@@ -81,58 +81,19 @@ public class GriefPreventionPlugin {
     }
 
     /**
-     * Checks if a player is specifically banned from the claim at the given location using
-     * GriefPrevention's /claimban command. This is different from just not having trust.
-     * Does NOT require GPFlags - only requires GriefPrevention.
+     * Checks if a player is specifically banned from the claim at the given location.
+     * NOTE: GriefPrevention 16.18.4 does not have isClaimBanned() method.
+     * This method always returns false - use CosmosCore integration instead for claim bans.
      *
      * @param loc The location to check for a claim
      * @param searchingPlayer The player to check for claim ban
-     * @return true if the player is specifically claim-banned, false otherwise
+     * @return false - GriefPrevention native claim ban not supported in this version
      */
     public boolean isPlayerBannedFromClaim(Location loc, Player searchingPlayer) {
-        if (!isGriefPreventionEnabled || griefPrevention == null) {
-            return false;
-        }
-
-        try {
-            Claim claim = griefPrevention.dataStore.getClaimAt(loc, false, null);
-            if (claim == null) {
-                // No claim at this location, player is not banned
-                return false;
-            }
-
-            Long claimId = claim.getID();
-
-            // Check if this is the claim owner - owners are never banned from their own claim
-            if (claim.getOwnerID() != null && claim.getOwnerID().equals(searchingPlayer.getUniqueId())) {
-                Logger.logDebugInfo("Player " + searchingPlayer.getName() + " is claim owner of claim " + claimId);
-                return false;
-            }
-
-            // Check cache first
-            String cacheKey = "ban-" + claimId + "-" + searchingPlayer.getUniqueId();
-            CachedClaimStatus cachedStatus = bannedClaimCache.get(cacheKey);
-
-            if (cachedStatus != null && !cachedStatus.isExpired()) {
-                Logger.logDebugInfo("Using cached ban status for claim " + claimId + " player " + searchingPlayer.getName() + ": " + cachedStatus.isLocked);
-                return cachedStatus.isLocked;
-            }
-
-            // Use isClaimBanned() to check specifically for /claimban - NOT allowAccess()
-            // allowAccess() returns error for ALL untrusted players, not just banned ones
-            boolean isBanned = claim.isClaimBanned(searchingPlayer.getUniqueId());
-
-            Logger.logDebugInfo("Player " + searchingPlayer.getName() + " claim-banned from claim " + claimId + ": " + isBanned);
-
-            // Update cache
-            bannedClaimCache.put(cacheKey, new CachedClaimStatus(isBanned, System.currentTimeMillis()));
-
-            return isBanned;
-        } catch (Exception e) {
-            Logger.logError("Error checking GriefPrevention claim ban: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
+        // GriefPrevention 16.18.4 does not have isClaimBanned() method
+        // Use CosmosCore integration for claim ban checking instead
+        Logger.logDebugInfo("GriefPrevention isPlayerBannedFromClaim called but not supported - use CosmosCore instead");
+        return false;
     }
 
     /**
