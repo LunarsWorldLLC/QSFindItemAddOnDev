@@ -28,6 +28,7 @@ import io.myzticbean.finditemaddon.utils.json.HiddenShopStorageUtil;
 import io.myzticbean.finditemaddon.utils.log.Logger;
 import io.myzticbean.finditemaddon.utils.warp.WarpUtils;
 import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
+import io.myzticbean.finditemaddon.utils.CustomItemSearchUtil;
 import me.kodysimpson.simpapi.colors.ColorTranslator;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
@@ -118,6 +119,37 @@ public class CmdExecutorHandler {
                 });
             } else {
                 List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findEnchantedBooksFromAllShops(enchantment, isBuying, player);
+                this.openShopMenu(player, searchResultList, false, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
+            }
+        } else if (CustomItemSearchUtil.isCustomItemSearch(itemArg)) {
+            // Handle custom:item_name searches (ExecutableItems)
+            String customItemName = CustomItemSearchUtil.extractCustomItemName(itemArg);
+            if (customItemName == null) {
+                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cInvalid custom item search format."));
+                return;
+            }
+            String customItemId = CustomItemSearchUtil.getExecutableItemId(customItemName);
+            if (customItemId == null) {
+                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cUnknown custom item: " + customItemName));
+                return;
+            }
+            Logger.logDebugInfo("Custom item search for: " + customItemId);
+            // If QS Hikari installed and Shop Cache feature available (>6), then run in async thread
+            if(!FindItemAddOn.isQSReremakeInstalled() && FindItemAddOn.getQsApiInstance().isQSShopCacheImplemented()) {
+                VirtualThreadScheduler.runTaskAsync(() -> {
+                    try {
+                        List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findCustomItemsFromAllShops(customItemId, isBuying, player);
+                        this.openShopMenu(player, searchResultList, true, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
+                    } catch (Exception e) {
+                        Logger.logError("Error during custom item search: " + e.getMessage());
+                        e.printStackTrace();
+                        Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                            player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                        });
+                    }
+                });
+            } else {
+                List<FoundShopItemModel> searchResultList = FindItemAddOn.getQsApiInstance().findCustomItemsFromAllShops(customItemId, isBuying, player);
                 this.openShopMenu(player, searchResultList, false, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
             }
         } else {

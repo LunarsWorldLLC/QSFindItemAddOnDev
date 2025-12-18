@@ -21,6 +21,7 @@ package io.myzticbean.finditemaddon.commands.simpapi;
 import io.myzticbean.finditemaddon.FindItemAddOn;
 import io.myzticbean.finditemaddon.handlers.command.CmdExecutorHandler;
 import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
+import io.myzticbean.finditemaddon.utils.CustomItemSearchUtil;
 import me.kodysimpson.simpapi.colors.ColorTranslator;
 import me.kodysimpson.simpapi.command.SubCommand;
 import org.apache.commons.lang3.StringUtils;
@@ -59,6 +60,8 @@ public class BuySubCmd extends SubCommand {
                     .toList());
             // Add enchanted book search options
             itemsList.addAll(EnchantedBookSearchUtil.getEnchantedBookAutocompleteList());
+            // Add custom item (ExecutableItems) search options
+            itemsList.addAll(CustomItemSearchUtil.getCustomItemAutocompleteList());
         }
         cmdExecutor = new CmdExecutorHandler();
     }

@@ -77,6 +77,15 @@ public interface QSApi<QSType, Shop> {
     List<FoundShopItemModel> findEnchantedBooksFromAllShops(Enchantment enchantment, boolean toBuy, Player searchingPlayer);
 
     /**
+     * Search for custom items (ExecutableItems) from all server shops
+     * @param customItemId The ExecutableItem ID to search for
+     * @param toBuy Whether player is buying or selling
+     * @param searchingPlayer The player performing the search
+     * @return List of found shops with the custom item
+     */
+    List<FoundShopItemModel> findCustomItemsFromAllShops(String customItemId, boolean toBuy, Player searchingPlayer);
+
+    /**
      * Fetch all items from all server shops
      * @param toBuy
      * @param searchingPlayer

@@ -28,6 +28,7 @@ import io.myzticbean.finditemaddon.models.enums.PlayerPermsEnum;
 import io.myzticbean.finditemaddon.utils.json.HiddenShopStorageUtil;
 import io.myzticbean.finditemaddon.utils.log.Logger;
 import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
+import io.myzticbean.finditemaddon.utils.CustomItemSearchUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -168,6 +169,45 @@ public class QSReremakeAPIHandler implements QSApi<QuickShop, Shop> {
             if(!FindItemAddOn.getConfigProvider().getBlacklistedWorlds().contains(shop_i.getLocation().getWorld())
                     // match enchanted book with specific stored enchantment
                     && EnchantedBookSearchUtil.isEnchantedBookWithEnchantment(shop_i.getItem(), enchantment)
+                    && (toBuy ? shop_i.isSelling() : shop_i.isBuying())) {
+                if(checkIfShopToBeIgnoredForFullOrEmpty(toBuy, shop_i)) {
+                    continue;
+                }
+                // check for shop if hidden
+                if(!HiddenShopStorageUtil.isShopHidden(shop_i)) {
+                    shopsFoundList.add(new FoundShopItemModel(
+                            shop_i.getPrice(),
+                            QSApi.processStockOrSpace((toBuy ? getRemainingStockOrSpaceFromShopCache(shop_i, true) : getRemainingStockOrSpaceFromShopCache(shop_i, false))),
+                            shop_i.getOwner(),
+                            shop_i.getLocation(),
+                            shop_i.getItem(),
+                            toBuy
+                    ));
+                }
+            }
+        }
+        List<FoundShopItemModel> sortedShops = handleShopSorting(toBuy, shopsFoundList);
+        QSApi.logTimeTookMsg(begin);
+        return sortedShops;
+    }
+
+    @Override
+    public List<FoundShopItemModel> findCustomItemsFromAllShops(String customItemId, boolean toBuy, Player searchingPlayer) {
+        var begin = Instant.now();
+        List<FoundShopItemModel> shopsFoundList = new ArrayList<>();
+        List<Shop> allShops;
+        if(FindItemAddOn.getConfigProvider().SEARCH_LOADED_SHOPS_ONLY) {
+            allShops = new ArrayList<>(api.getShopManager().getLoadedShops());
+        }
+        else {
+            allShops = api.getShopManager().getAllShops();
+        }
+        logTotalShopsOnServer(allShops.size());
+        for(Shop shop_i : allShops) {
+            // check for blacklisted worlds
+            if(!FindItemAddOn.getConfigProvider().getBlacklistedWorlds().contains(shop_i.getLocation().getWorld())
+                    // match custom item (ExecutableItems) with specific ID
+                    && CustomItemSearchUtil.isCustomItemWithId(shop_i.getItem(), customItemId)
                     && (toBuy ? shop_i.isSelling() : shop_i.isBuying())) {
                 if(checkIfShopToBeIgnoredForFullOrEmpty(toBuy, shop_i)) {
                     continue;
