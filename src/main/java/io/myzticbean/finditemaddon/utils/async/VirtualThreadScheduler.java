@@ -8,11 +8,21 @@ import java.util.concurrent.Future;
 
 public class VirtualThreadScheduler {
     // Use a shared executor for all virtual-thread tasks
-    private static final ExecutorService VIRTUAL_EXECUTOR =
-            Executors.newVirtualThreadPerTaskExecutor();
+    private static ExecutorService virtualExecutor;
 
     private VirtualThreadScheduler() {
         // prevent instantiation
+    }
+
+    /**
+     * Initialize or reinitialize the virtual thread executor.
+     * Call this on plugin enable to support PlugMan reloads.
+     */
+    public static void init() {
+        if (virtualExecutor == null || virtualExecutor.isShutdown()) {
+            Logger.logInfo("Initializing virtual thread executor...");
+            virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
+        }
     }
 
     /**
@@ -22,7 +32,8 @@ public class VirtualThreadScheduler {
      * @return a Future representing the result of the task.
      */
     public static Future<?> runTaskAsync(Runnable task) {
-        return VIRTUAL_EXECUTOR.submit(task);
+        ensureInitialized();
+        return virtualExecutor.submit(task);
     }
 
     /**
@@ -33,14 +44,26 @@ public class VirtualThreadScheduler {
      * @return a Future with the result.
      */
     public static <T> Future<T> runTaskAsync(java.util.concurrent.Callable<T> task) {
-        return VIRTUAL_EXECUTOR.submit(task);
+        ensureInitialized();
+        return virtualExecutor.submit(task);
+    }
+
+    /**
+     * Ensure the executor is initialized before use.
+     */
+    private static void ensureInitialized() {
+        if (virtualExecutor == null || virtualExecutor.isShutdown()) {
+            init();
+        }
     }
 
     /**
      * Shut down the virtual thread executor gracefully.
      */
     public static void shutdown() {
-        Logger.logInfo("Shutting down virtual thread executor...");
-        VIRTUAL_EXECUTOR.shutdown();
+        if (virtualExecutor != null && !virtualExecutor.isShutdown()) {
+            Logger.logInfo("Shutting down virtual thread executor...");
+            virtualExecutor.shutdown();
+        }
     }
 }
