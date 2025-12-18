@@ -24,6 +24,7 @@ public class GriefPreventionPlugin {
     private boolean isGPFlagsEnabled = false;
     private GriefPrevention griefPrevention;
     private GPFlags gpFlags;
+    private FlagManager flagManager; // Cache FlagManager to avoid blocking calls
 
     // Cache for locked claims: claimId-playerId -> CachedClaimStatus
     private final Map<String, CachedClaimStatus> lockedClaimCache = new ConcurrentHashMap<>();
@@ -52,11 +53,19 @@ public class GriefPreventionPlugin {
             if (plugin != null && plugin.isEnabled()) {
                 try {
                     gpFlags = (GPFlags) plugin;
-                    isGPFlagsEnabled = true;
-                    Logger.logInfo("Found GPFlags (as '" + name + "')");
+                    // Cache the FlagManager at initialization to avoid blocking calls later
+                    flagManager = gpFlags.getFlagManager();
+                    if (flagManager != null) {
+                        isGPFlagsEnabled = true;
+                        Logger.logInfo("Found GPFlags (as '" + name + "') and cached FlagManager");
+                    } else {
+                        Logger.logWarning("GPFlags found but FlagManager is null");
+                    }
                     return;
                 } catch (ClassCastException e) {
                     Logger.logDebugInfo("Plugin " + name + " found but not GPFlags type");
+                } catch (Exception e) {
+                    Logger.logError("Error getting FlagManager from GPFlags: " + e.getMessage());
                 }
             }
         }
@@ -123,13 +132,11 @@ public class GriefPreventionPlugin {
             }
 
             // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
-            Logger.logDebugInfo("Getting FlagManager from GPFlags...");
-            FlagManager flagManager = gpFlags.getFlagManager();
+            Logger.logDebugInfo("Using cached FlagManager, checking NoEntry flag...");
             if (flagManager == null) {
-                Logger.logDebugInfo("FlagManager is null!");
+                Logger.logDebugInfo("FlagManager is null - cannot check flags");
                 return false;
             }
-            Logger.logDebugInfo("FlagManager obtained, checking NoEntry flag...");
             boolean isLocked = false;
 
             // Check NoEntry flag (blocks all non-trusted players)
