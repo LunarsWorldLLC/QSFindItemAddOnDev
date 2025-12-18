@@ -25,6 +25,7 @@ import io.myzticbean.finditemaddon.utils.log.Logger;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -65,6 +66,15 @@ public interface QSApi<QSType, Shop> {
      * @return
      */
     List<FoundShopItemModel> findItemBasedOnDisplayNameFromAllShops(String displayName, boolean toBuy, Player searchingPlayer);
+
+    /**
+     * Search for enchanted books with a specific stored enchantment from all server shops
+     * @param enchantment The enchantment to search for
+     * @param toBuy Whether player is buying or selling
+     * @param searchingPlayer The player performing the search
+     * @return List of found shops with enchanted books containing the enchantment
+     */
+    List<FoundShopItemModel> findEnchantedBooksFromAllShops(Enchantment enchantment, boolean toBuy, Player searchingPlayer);
 
     /**
      * Fetch all items from all server shops

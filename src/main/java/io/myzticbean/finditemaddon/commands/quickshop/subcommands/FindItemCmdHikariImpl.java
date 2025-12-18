@@ -22,6 +22,7 @@ import com.ghostchu.quickshop.api.command.CommandHandler;
 import io.myzticbean.finditemaddon.FindItemAddOn;
 import io.myzticbean.finditemaddon.handlers.command.CmdExecutorHandler;
 import io.myzticbean.finditemaddon.models.enums.PlayerPermsEnum;
+import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
 import me.kodysimpson.simpapi.colors.ColorTranslator;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Material;
@@ -99,6 +100,8 @@ public class FindItemCmdHikariImpl implements CommandHandler<Player> {
             for (Material mat : Material.values()) {
                 itemsList.add(mat.name());
             }
+            // Add enchanted book search options
+            itemsList.addAll(EnchantedBookSearchUtil.getEnchantedBookAutocompleteList());
         }
         if (buyOrSellList.isEmpty()) {
             // to-buy

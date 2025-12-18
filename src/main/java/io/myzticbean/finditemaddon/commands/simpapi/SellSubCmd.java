@@ -20,6 +20,7 @@ package io.myzticbean.finditemaddon.commands.simpapi;
 
 import io.myzticbean.finditemaddon.FindItemAddOn;
 import io.myzticbean.finditemaddon.handlers.command.CmdExecutorHandler;
+import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
 import me.kodysimpson.simpapi.colors.ColorTranslator;
 import me.kodysimpson.simpapi.command.SubCommand;
 import org.apache.commons.lang3.StringUtils;
@@ -54,6 +55,8 @@ public class SellSubCmd extends SubCommand {
                     .filter(mat -> !FindItemAddOn.getConfigProvider().getBlacklistedMaterials().contains(mat))
                     .map(Material::name)
                     .toList());
+            // Add enchanted book search options
+            itemsList.addAll(EnchantedBookSearchUtil.getEnchantedBookAutocompleteList());
         }
         cmdExecutor = new CmdExecutorHandler();
     }

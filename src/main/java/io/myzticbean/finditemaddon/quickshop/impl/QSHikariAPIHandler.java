@@ -42,8 +42,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.charset.StandardCharsets;
@@ -174,6 +176,30 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
                     && Objects.requireNonNull(shopIterator.getItem().getItemMeta()).hasDisplayName()
                     && (shopIterator.getItem().getItemMeta().getDisplayName().toLowerCase().contains(displayName.toLowerCase())
                     && (toBuy ? shopIterator.isSelling() : shopIterator.isBuying()))
+                    // check for shop if hidden
+                    && !HiddenShopStorageUtil.isShopHidden(shopIterator)) {
+                processPotentialShopMatchAndAddToFoundList(toBuy, shopIterator, shopsFoundList, searchingPlayer);
+            }
+        }
+        List<FoundShopItemModel> sortedShops = handleShopSorting(toBuy, shopsFoundList);
+        QSApi.logTimeTookMsg(begin);
+        return sortedShops;
+    }
+
+    public List<FoundShopItemModel> findEnchantedBooksFromAllShops(Enchantment enchantment, boolean toBuy, Player searchingPlayer) {
+        Logger.logDebugInfo(IS_MAIN_THREAD + Bukkit.isPrimaryThread());
+        var begin = Instant.now();
+        List<FoundShopItemModel> shopsFoundList = new ArrayList<>();
+        List<Shop> allShops = fetchAllShopsFromQS();
+        Logger.logDebugInfo(QS_TOTAL_SHOPS_ON_SERVER + allShops.size());
+        for(Shop shopIterator : allShops) {
+            // check for quickshop hikari internal per-shop based search permission
+            if(shopIterator.playerAuthorize(searchingPlayer.getUniqueId(), BuiltInShopPermission.SEARCH)
+                    // check for blacklisted worlds
+                    && !FindItemAddOn.getConfigProvider().getBlacklistedWorlds().contains(shopIterator.getLocation().getWorld())
+                    // match enchanted book with specific stored enchantment
+                    && EnchantedBookSearchUtil.isEnchantedBookWithEnchantment(shopIterator.getItem(), enchantment)
+                    && (toBuy ? shopIterator.isSelling() : shopIterator.isBuying())
                     // check for shop if hidden
                     && !HiddenShopStorageUtil.isShopHidden(shopIterator)) {
                 processPotentialShopMatchAndAddToFoundList(toBuy, shopIterator, shopsFoundList, searchingPlayer);
