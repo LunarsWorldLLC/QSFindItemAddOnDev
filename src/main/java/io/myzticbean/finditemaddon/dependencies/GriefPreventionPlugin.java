@@ -222,7 +222,7 @@ public class GriefPreventionPlugin {
                     continue;
                 }
 
-                String flagName = flag.flagDefinition != null ? flag.flagDefinition.getName() : null;
+                String flagName = flag.getFlagDefinition() != null ? flag.getFlagDefinition().getName() : null;
                 if (flagName == null) {
                     continue;
                 }
