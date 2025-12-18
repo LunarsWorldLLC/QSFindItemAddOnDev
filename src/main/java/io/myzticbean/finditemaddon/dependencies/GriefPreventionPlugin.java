@@ -2,6 +2,7 @@ package io.myzticbean.finditemaddon.dependencies;
 
 import io.myzticbean.finditemaddon.utils.log.Logger;
 import me.ryanhamshire.GPFlags.GPFlags;
+import me.ryanhamshire.GPFlags.Flag;
 import me.ryanhamshire.GPFlags.FlagManager;
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
@@ -75,17 +76,18 @@ public class GriefPreventionPlugin {
                 return false;
             }
 
-            // Check for NoEntry flag
+            // Get the claim ID as string for GPFlags API
+            String claimId = String.valueOf(claim.getID());
             FlagManager flagManager = gpFlags.getFlagManager();
 
             // Check NoEntry flag (blocks all non-trusted players)
-            if (isFlagSetForClaim(flagManager, claim, "NoEntry")) {
+            if (isFlagSetForClaim(flagManager, claimId, "NoEntry")) {
                 Logger.logDebugInfo("Shop is in claim with NoEntry flag - player denied entry");
                 return true;
             }
 
             // Check NoEnterPlayer flag (blocks specific players or all players)
-            if (isFlagSetForClaim(flagManager, claim, "NoEnterPlayer")) {
+            if (isFlagSetForClaim(flagManager, claimId, "NoEnterPlayer")) {
                 Logger.logDebugInfo("Shop is in claim with NoEnterPlayer flag - player denied entry");
                 return true;
             }
@@ -99,15 +101,12 @@ public class GriefPreventionPlugin {
 
     /**
      * Check if a specific flag is set for the claim
+     * Uses GPFlags API: GetFlag(String id, String flagName)
      */
-    private boolean isFlagSetForClaim(FlagManager flagManager, Claim claim, String flagName) {
+    private boolean isFlagSetForClaim(FlagManager flagManager, String claimId, String flagName) {
         try {
-            var flagDef = flagManager.getFlagDefinitionByName(flagName);
-            if (flagDef == null) {
-                return false;
-            }
-
-            var flag = flagManager.getFlag(claim, flagDef);
+            // GPFlags uses GetFlag with capital G and takes string ID
+            Flag flag = flagManager.GetFlag(claimId, flagName);
             return flag != null && flag.getSet();
         } catch (Exception e) {
             Logger.logDebugInfo("Error checking flag " + flagName + ": " + e.getMessage());
