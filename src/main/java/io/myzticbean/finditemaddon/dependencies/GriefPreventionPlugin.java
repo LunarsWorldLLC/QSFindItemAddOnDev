@@ -124,28 +124,22 @@ public class GriefPreventionPlugin {
             String accessError = claim.allowAccess(player);
             boolean hasAccess = (accessError == null);
             Logger.logDebugInfo("Player " + player.getName() + " has access to claim " + claimId + ": " + hasAccess);
-            Logger.logWarning("GP-DEBUG: After access check, hasAccess=" + hasAccess);
 
             // If player has access (trust), they can enter regardless of flags
             if (hasAccess) {
-                Logger.logWarning("GP-DEBUG: Player has access, returning false (not denied)");
                 lockedClaimCache.put(cacheKey, new CachedClaimStatus(false, System.currentTimeMillis()));
                 return false;
             }
 
-            Logger.logWarning("GP-DEBUG: Player has NO access, checking flags...");
             // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
-            Logger.logWarning("GP-DEBUG: About to check flags for claim " + claimId);
             if (flagManager == null) {
-                Logger.logWarning("GP-DEBUG: FlagManager is null!");
+                Logger.logDebugInfo("FlagManager is null - cannot check flags");
                 return false;
             }
-            Logger.logWarning("GP-DEBUG: FlagManager valid, calling getEffectiveFlag for NoEnter...");
             boolean isLocked = false;
 
             // Check NoEntry flag (blocks all non-trusted players)
             Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
-            Logger.logWarning("GP-DEBUG: getEffectiveFlag returned: " + noEntryFlag);
             Logger.logDebugInfo("NoEntry flag result: " + (noEntryFlag != null ? "found (set=" + noEntryFlag.getSet() + ")" : "null"));
             if (noEntryFlag != null && noEntryFlag.getSet()) {
                 Logger.logDebugInfo("NoEntry flag is SET for claim " + claimId + " - player denied entry");

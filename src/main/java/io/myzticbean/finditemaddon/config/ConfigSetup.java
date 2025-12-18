@@ -133,6 +133,14 @@ public class ConfigSetup {
         if(!configFileConfiguration.contains("find-item-command.hiding-shop-owner-invalid-message", true)) {
             configFileConfiguration.set("find-item-command.hiding-shop-owner-invalid-message", "&cThat shop is not yours!");
         }
+        // GriefPrevention integration
+        if(!configFileConfiguration.contains("griefprevention.ignore-shops-in-locked-claims", true)) {
+            configFileConfiguration.set("griefprevention.ignore-shops-in-locked-claims", true);
+        }
+        // CosmosCore integration
+        if(!configFileConfiguration.contains("cosmoscore.ignore-shops-in-banned-claims", true)) {
+            configFileConfiguration.set("cosmoscore.ignore-shops-in-banned-claims", true);
+        }
 
         // ALWAYS AT LAST
         if(!configFileConfiguration.contains("config-version", true)) {
