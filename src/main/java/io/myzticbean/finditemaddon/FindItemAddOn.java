@@ -140,6 +140,9 @@ public final class FindItemAddOn extends JavaPlugin {
             }
         }
 
+        // Initialize virtual thread executor (supports PlugMan reloads)
+        VirtualThreadScheduler.init();
+
         if(!Bukkit.getPluginManager().isPluginEnabled("QuickShop")
                 && !Bukkit.getPluginManager().isPluginEnabled("QuickShop-Hikari")) {
             Logger.logInfo("Delaying QuickShop hook as they are not enabled yet");

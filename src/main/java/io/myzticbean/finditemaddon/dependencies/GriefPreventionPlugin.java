@@ -10,6 +10,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Integration with GriefPrevention and GPFlags to check for locked claims
  * @author myzticbean
@@ -20,6 +23,10 @@ public class GriefPreventionPlugin {
     private boolean isGPFlagsEnabled = false;
     private GriefPrevention griefPrevention;
     private GPFlags gpFlags;
+
+    // Cache for locked claims: claimId -> CachedClaimStatus
+    private final Map<Long, CachedClaimStatus> lockedClaimCache = new ConcurrentHashMap<>();
+    private static final long CACHE_EXPIRY_MS = 60000; // 60 seconds cache
 
     public GriefPreventionPlugin() {
         checkGriefPreventionPlugin();
@@ -76,21 +83,35 @@ public class GriefPreventionPlugin {
                 return false;
             }
 
+            // Check cache first
+            Long claimId = claim.getID();
+            CachedClaimStatus cachedStatus = lockedClaimCache.get(claimId);
+
+            if (cachedStatus != null && !cachedStatus.isExpired()) {
+                Logger.logDebugInfo("Using cached lock status for claim " + claimId + ": " + cachedStatus.isLocked);
+                return cachedStatus.isLocked;
+            }
+
+            // Cache miss or expired - check flags
             FlagManager flagManager = gpFlags.getFlagManager();
+            boolean isLocked = false;
 
             // Check NoEntry flag (blocks all non-trusted players)
             if (isFlagEffective(flagManager, location, "NoEntry", claim)) {
                 Logger.logDebugInfo("Shop is in claim with NoEntry flag - player denied entry");
-                return true;
+                isLocked = true;
             }
 
             // Check NoEnterPlayer flag (blocks specific players or all players)
-            if (isFlagEffective(flagManager, location, "NoEnterPlayer", claim)) {
+            if (!isLocked && isFlagEffective(flagManager, location, "NoEnterPlayer", claim)) {
                 Logger.logDebugInfo("Shop is in claim with NoEnterPlayer flag - player denied entry");
-                return true;
+                isLocked = true;
             }
 
-            return false;
+            // Update cache
+            lockedClaimCache.put(claimId, new CachedClaimStatus(isLocked, System.currentTimeMillis()));
+
+            return isLocked;
         } catch (Exception e) {
             Logger.logDebugInfo("Error checking GriefPrevention flags: " + e.getMessage());
             return false;
@@ -111,7 +132,39 @@ public class GriefPreventionPlugin {
         }
     }
 
+    /**
+     * Clear the locked claim cache. Call this if flags are changed.
+     */
+    public void clearCache() {
+        lockedClaimCache.clear();
+        Logger.logDebugInfo("GriefPrevention locked claim cache cleared");
+    }
+
+    /**
+     * Remove a specific claim from the cache
+     */
+    public void invalidateClaim(Long claimId) {
+        lockedClaimCache.remove(claimId);
+    }
+
     public boolean isEnabled() {
         return isGriefPreventionEnabled && isGPFlagsEnabled;
+    }
+
+    /**
+     * Inner class to hold cached claim lock status
+     */
+    private static class CachedClaimStatus {
+        final boolean isLocked;
+        final long cachedAt;
+
+        CachedClaimStatus(boolean isLocked, long cachedAt) {
+            this.isLocked = isLocked;
+            this.cachedAt = cachedAt;
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() - cachedAt > CACHE_EXPIRY_MS;
+        }
     }
 }
