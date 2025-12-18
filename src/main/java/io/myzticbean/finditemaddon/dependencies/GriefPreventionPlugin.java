@@ -124,13 +124,16 @@ public class GriefPreventionPlugin {
             String accessError = claim.allowAccess(player);
             boolean hasAccess = (accessError == null);
             Logger.logDebugInfo("Player " + player.getName() + " has access to claim " + claimId + ": " + hasAccess);
+            Logger.logWarning("GP-DEBUG: After access check, hasAccess=" + hasAccess);
 
             // If player has access (trust), they can enter regardless of flags
             if (hasAccess) {
+                Logger.logWarning("GP-DEBUG: Player has access, returning false (not denied)");
                 lockedClaimCache.put(cacheKey, new CachedClaimStatus(false, System.currentTimeMillis()));
                 return false;
             }
 
+            Logger.logWarning("GP-DEBUG: Player has NO access, checking flags...");
             // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
             Logger.logWarning("GP-DEBUG: About to check flags for claim " + claimId);
             if (flagManager == null) {
