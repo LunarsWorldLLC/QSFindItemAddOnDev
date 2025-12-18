@@ -71,7 +71,9 @@ public class CosmosCorePlugin {
             return;
         }
 
-        File dataFile = new File(cosmosCore.getDataFolder(), "claim-bans.json");
+        // CosmosCore stores claim bans in plugins/CosmosCore/databases/claim-bans.json
+        File databasesDir = new File(cosmosCore.getDataFolder(), "databases");
+        File dataFile = new File(databasesDir, "claim-bans.json");
         Logger.logDebugInfo("Looking for claim-bans.json at: " + dataFile.getAbsolutePath());
 
         if (!dataFile.exists()) {
