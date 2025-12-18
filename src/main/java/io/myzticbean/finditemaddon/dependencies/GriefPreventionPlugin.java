@@ -132,15 +132,19 @@ public class GriefPreventionPlugin {
             }
 
             // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
+            System.out.println("[FindItemAddOn-GP] About to check flags for claim " + claimId);
             Logger.logDebugInfo("Using cached FlagManager, checking NoEntry flag...");
             if (flagManager == null) {
+                System.out.println("[FindItemAddOn-GP] FlagManager is null!");
                 Logger.logDebugInfo("FlagManager is null - cannot check flags");
                 return false;
             }
+            System.out.println("[FindItemAddOn-GP] FlagManager is valid, calling getEffectiveFlag...");
             boolean isLocked = false;
 
             // Check NoEntry flag (blocks all non-trusted players)
             Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
+            System.out.println("[FindItemAddOn-GP] getEffectiveFlag returned: " + noEntryFlag);
             Logger.logDebugInfo("NoEntry flag result: " + (noEntryFlag != null ? "found (set=" + noEntryFlag.getSet() + ")" : "null"));
             if (noEntryFlag != null && noEntryFlag.getSet()) {
                 Logger.logDebugInfo("NoEntry flag is SET for claim " + claimId + " - player denied entry");
