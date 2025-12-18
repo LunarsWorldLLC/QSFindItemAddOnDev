@@ -81,13 +81,13 @@ public class GriefPreventionPlugin {
     }
 
     /**
-     * Checks if a player is banned from the claim at the given location using GriefPrevention's
-     * built-in access system. This works with /claimban and /untrust commands.
+     * Checks if a player is specifically banned from the claim at the given location using
+     * GriefPrevention's /claimban command. This is different from just not having trust.
      * Does NOT require GPFlags - only requires GriefPrevention.
      *
      * @param loc The location to check for a claim
-     * @param searchingPlayer The player to check access for
-     * @return true if the player is banned from the claim (no access), false otherwise
+     * @param searchingPlayer The player to check for claim ban
+     * @return true if the player is specifically claim-banned, false otherwise
      */
     public boolean isPlayerBannedFromClaim(Location loc, Player searchingPlayer) {
         if (!isGriefPreventionEnabled || griefPrevention == null) {
@@ -118,11 +118,11 @@ public class GriefPreventionPlugin {
                 return cachedStatus.isLocked;
             }
 
-            // allowAccess returns null if access is allowed, or an error message if denied
-            String accessDenied = claim.allowAccess(searchingPlayer);
-            boolean isBanned = accessDenied != null;
+            // Use isClaimBanned() to check specifically for /claimban - NOT allowAccess()
+            // allowAccess() returns error for ALL untrusted players, not just banned ones
+            boolean isBanned = claim.isClaimBanned(searchingPlayer.getUniqueId());
 
-            Logger.logDebugInfo("Player " + searchingPlayer.getName() + " banned from claim " + claimId + ": " + isBanned + (isBanned ? " (reason: " + accessDenied + ")" : ""));
+            Logger.logDebugInfo("Player " + searchingPlayer.getName() + " claim-banned from claim " + claimId + ": " + isBanned);
 
             // Update cache
             bannedClaimCache.put(cacheKey, new CachedClaimStatus(isBanned, System.currentTimeMillis()));
