@@ -111,6 +111,7 @@ public class ConfigProvider {
     public final boolean DEBUG_MODE = ConfigSetup.get().getBoolean("debug-mode");
     public final int CONFIG_VERSION = ConfigSetup.get().getInt("config-version");
     public final boolean BENTOBOX_IGNORE_LOCKED_ISLAND_SHOPS = ConfigSetup.get().getBoolean(BENTOBOX + "ignore-locked-island-shops");
+    public final boolean GRIEFPREVENTION_IGNORE_SHOPS_WHERE_BANNED = ConfigSetup.get().getBoolean(GRIEFPREVENTION + "ignore-shops-where-player-banned");
     public final boolean GRIEFPREVENTION_IGNORE_LOCKED_CLAIMS = ConfigSetup.get().getBoolean(GRIEFPREVENTION + "ignore-shops-in-locked-claims");
     public final boolean COSMOSCORE_IGNORE_BANNED_CLAIMS = ConfigSetup.get().getBoolean(COSMOSCORE + "ignore-shops-in-banned-claims");
 

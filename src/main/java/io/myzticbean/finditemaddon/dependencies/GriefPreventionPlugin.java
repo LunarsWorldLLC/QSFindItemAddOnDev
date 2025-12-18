@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Integration with GriefPrevention and GPFlags to check for locked claims
+ * Integration with GriefPrevention and GPFlags to check for locked claims and claim bans
  * @author myzticbean
  */
 public class GriefPreventionPlugin {
@@ -28,6 +28,7 @@ public class GriefPreventionPlugin {
 
     // Cache for locked claims: claimId-playerId -> CachedClaimStatus
     private final Map<String, CachedClaimStatus> lockedClaimCache = new ConcurrentHashMap<>();
+    private final Map<String, CachedClaimStatus> bannedClaimCache = new ConcurrentHashMap<>();
     private static final long CACHE_EXPIRY_MS = 60000; // 60 seconds cache
 
     public GriefPreventionPlugin() {
@@ -80,16 +81,35 @@ public class GriefPreventionPlugin {
     }
 
     /**
+     * Checks if a player is specifically banned from the claim at the given location.
+     * NOTE: GriefPrevention 16.18.4 does not have isClaimBanned() method.
+     * This method always returns false - use CosmosCore integration instead for claim bans.
+     *
+     * @param loc The location to check for a claim
+     * @param searchingPlayer The player to check for claim ban
+     * @return false - GriefPrevention native claim ban not supported in this version
+     */
+    public boolean isPlayerBannedFromClaim(Location loc, Player searchingPlayer) {
+        // GriefPrevention 16.18.4 does not have isClaimBanned() method
+        // Use CosmosCore integration for claim ban checking instead
+        Logger.logDebugInfo("GriefPrevention isPlayerBannedFromClaim called but not supported - use CosmosCore instead");
+        return false;
+    }
+
+    /**
      * Check if the player is denied entry to the claim at the given location
-     * due to NoEntry or NoEnterPlayer flags from GPFlags
+     * due to NoEntry or NoEnterPlayer flags from GPFlags.
+     * Requires both GriefPrevention AND GPFlags.
      *
      * @param location The location to check
      * @param player The player trying to access the shop
      * @return true if the player is denied entry to the claim
      */
     public boolean isPlayerDeniedEntry(Location location, Player player) {
-        if (!isGriefPreventionEnabled || !isGPFlagsEnabled) {
-            Logger.logDebugInfo("GPFlags check skipped - GP enabled: " + isGriefPreventionEnabled + ", GPFlags enabled: " + isGPFlagsEnabled);
+        // Early return if GPFlags is not properly initialized
+        if (!isGriefPreventionEnabled || !isGPFlagsEnabled || flagManager == null) {
+            Logger.logDebugInfo("GPFlags check skipped - GP: " + isGriefPreventionEnabled +
+                ", GPFlags: " + isGPFlagsEnabled + ", FlagManager: " + (flagManager != null));
             return false;
         }
 
@@ -102,7 +122,10 @@ public class GriefPreventionPlugin {
             }
 
             Long claimId = claim.getID();
-            Logger.logDebugInfo("Checking claim ID " + claimId + " for player " + player.getName());
+            if (claimId == null) {
+                Logger.logDebugInfo("Claim has null ID");
+                return false;
+            }
 
             // Only skip for claim owner - they should always see their own shops
             if (claim.getOwnerID() != null && claim.getOwnerID().equals(player.getUniqueId())) {
@@ -111,59 +134,59 @@ public class GriefPreventionPlugin {
             }
 
             // Check cache first (cache key includes player ID since access varies per player)
-            String cacheKey = claimId + "-" + player.getUniqueId();
+            String cacheKey = "entry-" + claimId + "-" + player.getUniqueId();
             CachedClaimStatus cachedStatus = lockedClaimCache.get(cacheKey);
 
             if (cachedStatus != null && !cachedStatus.isExpired()) {
-                Logger.logDebugInfo("Using cached lock status for claim " + claimId + " player " + player.getName() + ": " + cachedStatus.isLocked);
+                Logger.logDebugInfo("Using cached GPFlags status for claim " + claimId + ": " + cachedStatus.isLocked);
                 return cachedStatus.isLocked;
             }
 
-            // Check if player has access (trust) to the claim
-            // allowAccess returns null if player HAS access, error message if NOT
-            String accessError = claim.allowAccess(player);
-            boolean hasAccess = (accessError == null);
-            Logger.logDebugInfo("Player " + player.getName() + " has access to claim " + claimId + ": " + hasAccess);
-
-            // If player has access (trust), they can enter regardless of flags
-            if (hasAccess) {
-                lockedClaimCache.put(cacheKey, new CachedClaimStatus(false, System.currentTimeMillis()));
-                return false;
-            }
-
-            // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
-            if (flagManager == null) {
-                Logger.logDebugInfo("FlagManager is null - cannot check flags");
-                return false;
-            }
+            Logger.logDebugInfo("Checking GPFlags for claim " + claimId + " player " + player.getName());
             boolean isLocked = false;
 
             // Check NoEntry flag (blocks all non-trusted players)
-            Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
-            Logger.logDebugInfo("NoEntry flag result: " + (noEntryFlag != null ? "found (set=" + noEntryFlag.getSet() + ")" : "null"));
-            if (noEntryFlag != null && noEntryFlag.getSet()) {
-                Logger.logDebugInfo("NoEntry flag is SET for claim " + claimId + " - player denied entry");
-                isLocked = true;
+            try {
+                Logger.logDebugInfo("Checking NoEnter flag...");
+                Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
+                Logger.logDebugInfo("NoEnter flag result: " + (noEntryFlag != null ? "found (set=" + noEntryFlag.getSet() + ")" : "null"));
+                if (noEntryFlag != null && noEntryFlag.getSet()) {
+                    // NoEntry flag is set - check if player has access (trusted players can still enter)
+                    String accessError = claim.allowAccess(player);
+                    if (accessError != null) {
+                        Logger.logDebugInfo("NoEnter flag blocks player " + player.getName());
+                        isLocked = true;
+                    }
+                }
+            } catch (Exception e) {
+                Logger.logDebugInfo("Error checking NoEnter flag: " + e.getMessage());
             }
 
             // Check NoEnterPlayer flag (blocks specific players by name in parameters)
             if (!isLocked) {
-                Flag noEnterPlayerFlag = flagManager.getEffectiveFlag(location, "NoEnterPlayer", claim);
-                if (noEnterPlayerFlag != null && noEnterPlayerFlag.getSet()) {
-                    // Check if player's name is in the flag parameters
-                    String params = noEnterPlayerFlag.parameters;
-                    if (params != null && params.toUpperCase().contains(player.getName().toUpperCase())) {
-                        Logger.logDebugInfo("NoEnterPlayer flag is SET for claim " + claimId + " with player " + player.getName() + " in params - player denied entry");
-                        isLocked = true;
-                    } else {
-                        Logger.logDebugInfo("NoEnterPlayer flag is SET but player " + player.getName() + " not in params: " + params);
+                try {
+                    Logger.logDebugInfo("Checking NoEnterPlayer flag...");
+                    Flag noEnterPlayerFlag = flagManager.getEffectiveFlag(location, "NoEnterPlayer", claim);
+                    if (noEnterPlayerFlag != null && noEnterPlayerFlag.getSet()) {
+                        // Check if player's name is in the flag parameters
+                        String params = noEnterPlayerFlag.parameters;
+                        if (params != null && params.toUpperCase().contains(player.getName().toUpperCase())) {
+                            // Also check if player has access
+                            String accessError = claim.allowAccess(player);
+                            if (accessError != null) {
+                                Logger.logDebugInfo("NoEnterPlayer flag blocks player " + player.getName());
+                                isLocked = true;
+                            }
+                        }
                     }
+                } catch (Exception e) {
+                    Logger.logDebugInfo("Error checking NoEnterPlayer flag: " + e.getMessage());
                 }
             }
 
             // Update cache
             lockedClaimCache.put(cacheKey, new CachedClaimStatus(isLocked, System.currentTimeMillis()));
-            Logger.logDebugInfo("Cached lock status for claim " + claimId + " player " + player.getName() + ": " + isLocked);
+            Logger.logDebugInfo("GPFlags check result for claim " + claimId + ": " + isLocked);
 
             return isLocked;
         } catch (Exception e) {
@@ -174,15 +197,28 @@ public class GriefPreventionPlugin {
     }
 
     /**
-     * Clear the locked claim cache. Call this if flags are changed.
+     * Clear all caches. Call this if flags or permissions are changed.
      */
     public void clearCache() {
         lockedClaimCache.clear();
-        Logger.logDebugInfo("GriefPrevention locked claim cache cleared");
+        bannedClaimCache.clear();
+        Logger.logDebugInfo("GriefPrevention caches cleared");
     }
 
+    public boolean isGriefPreventionEnabled() {
+        return isGriefPreventionEnabled;
+    }
+
+    public boolean isGPFlagsEnabled() {
+        return isGPFlagsEnabled;
+    }
+
+    /**
+     * @deprecated Use isGriefPreventionEnabled() or isGPFlagsEnabled() instead
+     */
+    @Deprecated
     public boolean isEnabled() {
-        return isGriefPreventionEnabled && isGPFlagsEnabled;
+        return isGriefPreventionEnabled;
     }
 
     /**
