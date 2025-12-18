@@ -63,6 +63,7 @@ public class GriefPreventionPlugin {
      */
     public boolean isPlayerDeniedEntry(Location location, Player player) {
         if (!isGriefPreventionEnabled || !isGPFlagsEnabled) {
+            Logger.logDebugInfo("GPFlags check skipped - GP enabled: " + isGriefPreventionEnabled + ", GPFlags enabled: " + isGPFlagsEnabled);
             return false;
         }
 
@@ -70,21 +71,20 @@ public class GriefPreventionPlugin {
             // Get the claim at the location
             Claim claim = griefPrevention.dataStore.getClaimAt(location, false, null);
             if (claim == null) {
+                Logger.logDebugInfo("No claim found at location: " + location);
                 return false;
             }
 
-            // Check if the player is the claim owner or has trust
+            Long claimId = claim.getID();
+            Logger.logDebugInfo("Checking claim ID " + claimId + " for player " + player.getName());
+
+            // Only skip for claim owner - they should always see their own shops
             if (claim.getOwnerID() != null && claim.getOwnerID().equals(player.getUniqueId())) {
-                return false;
-            }
-
-            // Check for access trust - if player has trust, they can enter
-            if (claim.allowAccess(player) == null) {
+                Logger.logDebugInfo("Player " + player.getName() + " is claim owner, not blocking");
                 return false;
             }
 
             // Check cache first
-            Long claimId = claim.getID();
             CachedClaimStatus cachedStatus = lockedClaimCache.get(claimId);
 
             if (cachedStatus != null && !cachedStatus.isExpired()) {
@@ -96,24 +96,32 @@ public class GriefPreventionPlugin {
             FlagManager flagManager = gpFlags.getFlagManager();
             boolean isLocked = false;
 
-            // Check NoEntry flag (blocks all non-trusted players)
-            if (isFlagEffective(flagManager, location, "NoEntry", claim)) {
+            // Check NoEntry flag (blocks all non-owner players)
+            boolean noEntryFlag = isFlagEffective(flagManager, location, "NoEntry", claim);
+            Logger.logDebugInfo("NoEntry flag for claim " + claimId + ": " + noEntryFlag);
+            if (noEntryFlag) {
                 Logger.logDebugInfo("Shop is in claim with NoEntry flag - player denied entry");
                 isLocked = true;
             }
 
             // Check NoEnterPlayer flag (blocks specific players or all players)
-            if (!isLocked && isFlagEffective(flagManager, location, "NoEnterPlayer", claim)) {
-                Logger.logDebugInfo("Shop is in claim with NoEnterPlayer flag - player denied entry");
-                isLocked = true;
+            if (!isLocked) {
+                boolean noEnterPlayerFlag = isFlagEffective(flagManager, location, "NoEnterPlayer", claim);
+                Logger.logDebugInfo("NoEnterPlayer flag for claim " + claimId + ": " + noEnterPlayerFlag);
+                if (noEnterPlayerFlag) {
+                    Logger.logDebugInfo("Shop is in claim with NoEnterPlayer flag - player denied entry");
+                    isLocked = true;
+                }
             }
 
             // Update cache
             lockedClaimCache.put(claimId, new CachedClaimStatus(isLocked, System.currentTimeMillis()));
+            Logger.logDebugInfo("Cached lock status for claim " + claimId + ": " + isLocked);
 
             return isLocked;
         } catch (Exception e) {
             Logger.logDebugInfo("Error checking GriefPrevention flags: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -125,7 +133,9 @@ public class GriefPreventionPlugin {
     private boolean isFlagEffective(FlagManager flagManager, Location location, String flagName, Claim claim) {
         try {
             Flag flag = flagManager.getEffectiveFlag(location, flagName, claim);
-            return flag != null && flag.getSet();
+            boolean isSet = flag != null && flag.getSet();
+            Logger.logDebugInfo("Flag " + flagName + " at location: flag=" + flag + ", isSet=" + isSet);
+            return isSet;
         } catch (Exception e) {
             Logger.logDebugInfo("Error checking flag " + flagName + ": " + e.getMessage());
             return false;

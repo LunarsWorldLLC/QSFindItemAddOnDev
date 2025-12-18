@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.lang.reflect.Type;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -65,12 +64,15 @@ public class CosmosCorePlugin {
      */
     private void loadBannedPlayers() {
         if (cosmosCore == null) {
+            Logger.logDebugInfo("CosmosCore plugin is null, cannot load claim bans");
             return;
         }
 
         File dataFile = new File(cosmosCore.getDataFolder(), "claim-bans.json");
+        Logger.logDebugInfo("Looking for claim-bans.json at: " + dataFile.getAbsolutePath());
+
         if (!dataFile.exists()) {
-            Logger.logDebugInfo("CosmosCore claim-bans.json not found");
+            Logger.logDebugInfo("CosmosCore claim-bans.json not found at: " + dataFile.getAbsolutePath());
             return;
         }
 
@@ -79,11 +81,18 @@ public class CosmosCorePlugin {
             Map<Long, Set<UUID>> loaded = new Gson().fromJson(reader, type);
             if (loaded != null) {
                 bannedClaimPlayers = loaded;
-                Logger.logDebugInfo("Loaded " + bannedClaimPlayers.size() + " claim ban entries from CosmosCore");
+                Logger.logInfo("Loaded " + bannedClaimPlayers.size() + " claim ban entries from CosmosCore");
+                // Log the claim IDs for debugging
+                for (Map.Entry<Long, Set<UUID>> entry : bannedClaimPlayers.entrySet()) {
+                    Logger.logDebugInfo("Claim ID " + entry.getKey() + " has " + entry.getValue().size() + " banned players");
+                }
+            } else {
+                Logger.logDebugInfo("CosmosCore claim-bans.json was empty or invalid");
             }
             lastLoadTime = System.currentTimeMillis();
         } catch (Exception e) {
-            Logger.logDebugInfo("Error loading CosmosCore claim bans: " + e.getMessage());
+            Logger.logWarning("Error loading CosmosCore claim bans: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -105,6 +114,7 @@ public class CosmosCorePlugin {
      */
     public boolean isPlayerBannedFromClaim(Location location, Player player) {
         if (!isCosmosCoreEnabled || !isGriefPreventionEnabled) {
+            Logger.logDebugInfo("CosmosCore check skipped - enabled: " + isCosmosCoreEnabled + ", GP enabled: " + isGriefPreventionEnabled);
             return false;
         }
 
@@ -115,26 +125,34 @@ public class CosmosCorePlugin {
             // Get the claim at this location using GriefPrevention
             Claim claim = griefPrevention.dataStore.getClaimAt(location, false, null);
             if (claim == null) {
+                Logger.logDebugInfo("No claim found at location: " + location);
                 return false;
             }
 
             Long claimId = claim.getID();
             if (claimId == null) {
+                Logger.logDebugInfo("Claim has null ID at location: " + location);
                 return false;
             }
+
+            Logger.logDebugInfo("Checking claim ID " + claimId + " for banned player " + player.getName() + " (" + player.getUniqueId() + ")");
 
             // Check if there are any banned players for this claim
             Set<UUID> bannedPlayers = bannedClaimPlayers.get(claimId);
             if (bannedPlayers == null || bannedPlayers.isEmpty()) {
+                Logger.logDebugInfo("No banned players found for claim ID " + claimId);
                 return false;
             }
 
+            Logger.logDebugInfo("Claim ID " + claimId + " has banned players: " + bannedPlayers);
+
             // Check if this player is banned
             if (bannedPlayers.contains(player.getUniqueId())) {
-                Logger.logDebugInfo("Player " + player.getName() + " is banned from CosmosCore claim at " + location);
+                Logger.logDebugInfo("Player " + player.getName() + " IS BANNED from claim " + claimId);
                 return true;
             }
 
+            Logger.logDebugInfo("Player " + player.getName() + " is NOT banned from claim " + claimId);
             return false;
         } catch (Exception e) {
             Logger.logDebugInfo("Error checking CosmosCore claim ban: " + e.getMessage());
