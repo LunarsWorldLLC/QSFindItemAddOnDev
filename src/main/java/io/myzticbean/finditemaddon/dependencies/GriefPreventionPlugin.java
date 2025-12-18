@@ -76,18 +76,16 @@ public class GriefPreventionPlugin {
                 return false;
             }
 
-            // Get the claim ID as string for GPFlags API
-            String claimId = String.valueOf(claim.getID());
             FlagManager flagManager = gpFlags.getFlagManager();
 
             // Check NoEntry flag (blocks all non-trusted players)
-            if (isFlagSetForClaim(flagManager, claimId, "NoEntry")) {
+            if (isFlagEffective(flagManager, location, "NoEntry", claim)) {
                 Logger.logDebugInfo("Shop is in claim with NoEntry flag - player denied entry");
                 return true;
             }
 
             // Check NoEnterPlayer flag (blocks specific players or all players)
-            if (isFlagSetForClaim(flagManager, claimId, "NoEnterPlayer")) {
+            if (isFlagEffective(flagManager, location, "NoEnterPlayer", claim)) {
                 Logger.logDebugInfo("Shop is in claim with NoEnterPlayer flag - player denied entry");
                 return true;
             }
@@ -100,13 +98,12 @@ public class GriefPreventionPlugin {
     }
 
     /**
-     * Check if a specific flag is set for the claim
-     * Uses GPFlags API: GetFlag(String id, String flagName)
+     * Check if a specific flag is effective at the location
+     * Uses GPFlags API: getEffectiveFlag(Location, String, Claim)
      */
-    private boolean isFlagSetForClaim(FlagManager flagManager, String claimId, String flagName) {
+    private boolean isFlagEffective(FlagManager flagManager, Location location, String flagName, Claim claim) {
         try {
-            // GPFlags uses GetFlag with capital G and takes string ID
-            Flag flag = flagManager.GetFlag(claimId, flagName);
+            Flag flag = flagManager.getEffectiveFlag(location, flagName, claim);
             return flag != null && flag.getSet();
         } catch (Exception e) {
             Logger.logDebugInfo("Error checking flag " + flagName + ": " + e.getMessage());
