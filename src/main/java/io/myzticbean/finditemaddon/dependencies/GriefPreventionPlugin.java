@@ -9,6 +9,7 @@ import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,8 +25,8 @@ public class GriefPreventionPlugin {
     private GriefPrevention griefPrevention;
     private GPFlags gpFlags;
 
-    // Cache for locked claims: claimId -> CachedClaimStatus
-    private final Map<Long, CachedClaimStatus> lockedClaimCache = new ConcurrentHashMap<>();
+    // Cache for locked claims: claimId-playerId -> CachedClaimStatus
+    private final Map<String, CachedClaimStatus> lockedClaimCache = new ConcurrentHashMap<>();
     private static final long CACHE_EXPIRY_MS = 60000; // 60 seconds cache
 
     public GriefPreventionPlugin() {
@@ -44,11 +45,27 @@ public class GriefPreventionPlugin {
     }
 
     private void checkGPFlagsPlugin() {
-        if (Bukkit.getPluginManager().isPluginEnabled("GPFlags")) {
-            gpFlags = (GPFlags) Bukkit.getPluginManager().getPlugin("GPFlags");
-            isGPFlagsEnabled = gpFlags != null;
-            if (isGPFlagsEnabled) {
-                Logger.logInfo("Found GPFlags");
+        // Try multiple possible plugin names
+        String[] possibleNames = {"GPFlags", "GriefPreventionFlags"};
+        for (String name : possibleNames) {
+            Plugin plugin = Bukkit.getPluginManager().getPlugin(name);
+            if (plugin != null && plugin.isEnabled()) {
+                try {
+                    gpFlags = (GPFlags) plugin;
+                    isGPFlagsEnabled = true;
+                    Logger.logInfo("Found GPFlags (as '" + name + "')");
+                    return;
+                } catch (ClassCastException e) {
+                    Logger.logDebugInfo("Plugin " + name + " found but not GPFlags type");
+                }
+            }
+        }
+
+        // Log available plugins for debugging
+        Logger.logDebugInfo("GPFlags not found. Available plugins: ");
+        for (Plugin p : Bukkit.getPluginManager().getPlugins()) {
+            if (p.getName().toLowerCase().contains("flag") || p.getName().toLowerCase().contains("grief")) {
+                Logger.logDebugInfo("  - " + p.getName() + " (enabled: " + p.isEnabled() + ")");
             }
         }
     }
@@ -84,39 +101,56 @@ public class GriefPreventionPlugin {
                 return false;
             }
 
-            // Check cache first
-            CachedClaimStatus cachedStatus = lockedClaimCache.get(claimId);
+            // Check cache first (cache key includes player ID since access varies per player)
+            String cacheKey = claimId + "-" + player.getUniqueId();
+            CachedClaimStatus cachedStatus = lockedClaimCache.get(cacheKey);
 
             if (cachedStatus != null && !cachedStatus.isExpired()) {
-                Logger.logDebugInfo("Using cached lock status for claim " + claimId + ": " + cachedStatus.isLocked);
+                Logger.logDebugInfo("Using cached lock status for claim " + claimId + " player " + player.getName() + ": " + cachedStatus.isLocked);
                 return cachedStatus.isLocked;
             }
 
-            // Cache miss or expired - check flags
+            // Check if player has access (trust) to the claim
+            // allowAccess returns null if player HAS access, error message if NOT
+            String accessError = claim.allowAccess(player);
+            boolean hasAccess = (accessError == null);
+            Logger.logDebugInfo("Player " + player.getName() + " has access to claim " + claimId + ": " + hasAccess);
+
+            // If player has access (trust), they can enter regardless of flags
+            if (hasAccess) {
+                lockedClaimCache.put(cacheKey, new CachedClaimStatus(false, System.currentTimeMillis()));
+                return false;
+            }
+
+            // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
             FlagManager flagManager = gpFlags.getFlagManager();
             boolean isLocked = false;
 
-            // Check NoEntry flag (blocks all non-owner players)
-            boolean noEntryFlag = isFlagEffective(flagManager, location, "NoEntry", claim);
-            Logger.logDebugInfo("NoEntry flag for claim " + claimId + ": " + noEntryFlag);
-            if (noEntryFlag) {
-                Logger.logDebugInfo("Shop is in claim with NoEntry flag - player denied entry");
+            // Check NoEntry flag (blocks all non-trusted players)
+            Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
+            if (noEntryFlag != null && noEntryFlag.getSet()) {
+                Logger.logDebugInfo("NoEntry flag is SET for claim " + claimId + " - player denied entry");
                 isLocked = true;
             }
 
-            // Check NoEnterPlayer flag (blocks specific players or all players)
+            // Check NoEnterPlayer flag (blocks specific players by name in parameters)
             if (!isLocked) {
-                boolean noEnterPlayerFlag = isFlagEffective(flagManager, location, "NoEnterPlayer", claim);
-                Logger.logDebugInfo("NoEnterPlayer flag for claim " + claimId + ": " + noEnterPlayerFlag);
-                if (noEnterPlayerFlag) {
-                    Logger.logDebugInfo("Shop is in claim with NoEnterPlayer flag - player denied entry");
-                    isLocked = true;
+                Flag noEnterPlayerFlag = flagManager.getEffectiveFlag(location, "NoEnterPlayer", claim);
+                if (noEnterPlayerFlag != null && noEnterPlayerFlag.getSet()) {
+                    // Check if player's name is in the flag parameters
+                    String params = noEnterPlayerFlag.parameters;
+                    if (params != null && params.toUpperCase().contains(player.getName().toUpperCase())) {
+                        Logger.logDebugInfo("NoEnterPlayer flag is SET for claim " + claimId + " with player " + player.getName() + " in params - player denied entry");
+                        isLocked = true;
+                    } else {
+                        Logger.logDebugInfo("NoEnterPlayer flag is SET but player " + player.getName() + " not in params: " + params);
+                    }
                 }
             }
 
             // Update cache
-            lockedClaimCache.put(claimId, new CachedClaimStatus(isLocked, System.currentTimeMillis()));
-            Logger.logDebugInfo("Cached lock status for claim " + claimId + ": " + isLocked);
+            lockedClaimCache.put(cacheKey, new CachedClaimStatus(isLocked, System.currentTimeMillis()));
+            Logger.logDebugInfo("Cached lock status for claim " + claimId + " player " + player.getName() + ": " + isLocked);
 
             return isLocked;
         } catch (Exception e) {
@@ -127,34 +161,11 @@ public class GriefPreventionPlugin {
     }
 
     /**
-     * Check if a specific flag is effective at the location
-     * Uses GPFlags API: getEffectiveFlag(Location, String, Claim)
-     */
-    private boolean isFlagEffective(FlagManager flagManager, Location location, String flagName, Claim claim) {
-        try {
-            Flag flag = flagManager.getEffectiveFlag(location, flagName, claim);
-            boolean isSet = flag != null && flag.getSet();
-            Logger.logDebugInfo("Flag " + flagName + " at location: flag=" + flag + ", isSet=" + isSet);
-            return isSet;
-        } catch (Exception e) {
-            Logger.logDebugInfo("Error checking flag " + flagName + ": " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
      * Clear the locked claim cache. Call this if flags are changed.
      */
     public void clearCache() {
         lockedClaimCache.clear();
         Logger.logDebugInfo("GriefPrevention locked claim cache cleared");
-    }
-
-    /**
-     * Remove a specific claim from the cache
-     */
-    public void invalidateClaim(Long claimId) {
-        lockedClaimCache.remove(claimId);
     }
 
     public boolean isEnabled() {
