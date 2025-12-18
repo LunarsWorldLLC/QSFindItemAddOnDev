@@ -123,11 +123,18 @@ public class GriefPreventionPlugin {
             }
 
             // Player doesn't have access - now check if NoEntry/NoEnterPlayer flags are set
+            Logger.logDebugInfo("Getting FlagManager from GPFlags...");
             FlagManager flagManager = gpFlags.getFlagManager();
+            if (flagManager == null) {
+                Logger.logDebugInfo("FlagManager is null!");
+                return false;
+            }
+            Logger.logDebugInfo("FlagManager obtained, checking NoEntry flag...");
             boolean isLocked = false;
 
             // Check NoEntry flag (blocks all non-trusted players)
             Flag noEntryFlag = flagManager.getEffectiveFlag(location, "NoEnter", claim);
+            Logger.logDebugInfo("NoEntry flag result: " + (noEntryFlag != null ? "found (set=" + noEntryFlag.getSet() + ")" : "null"));
             if (noEntryFlag != null && noEntryFlag.getSet()) {
                 Logger.logDebugInfo("NoEntry flag is SET for claim " + claimId + " - player denied entry");
                 isLocked = true;
@@ -154,7 +161,7 @@ public class GriefPreventionPlugin {
 
             return isLocked;
         } catch (Exception e) {
-            Logger.logDebugInfo("Error checking GriefPrevention flags: " + e.getMessage());
+            Logger.logError("Error checking GriefPrevention flags: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
