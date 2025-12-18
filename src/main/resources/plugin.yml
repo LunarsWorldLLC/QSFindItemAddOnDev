@@ -12,6 +12,9 @@ softdepend:
   - Essentials
   - Residence
   - BentoBox
+  - GriefPrevention
+  - GPFlags
+  - CosmosCore
 
 permissions:
   finditem.use:
