@@ -14,6 +14,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.lang.reflect.Type;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -61,6 +63,7 @@ public class CosmosCorePlugin {
 
     /**
      * Load banned players from CosmosCore's claim-bans.json file
+     * JSON format: {"claimId": ["uuid1", "uuid2"], ...}
      */
     private void loadBannedPlayers() {
         if (cosmosCore == null) {
@@ -77,14 +80,38 @@ public class CosmosCorePlugin {
         }
 
         try (FileReader reader = new FileReader(dataFile)) {
-            Type type = new TypeToken<Map<Long, Set<UUID>>>() {}.getType();
-            Map<Long, Set<UUID>> loaded = new Gson().fromJson(reader, type);
-            if (loaded != null) {
-                bannedClaimPlayers = loaded;
+            // Parse as Map<String, List<String>> since JSON keys are strings
+            Type type = new TypeToken<Map<String, List<String>>>() {}.getType();
+            Map<String, List<String>> rawData = new Gson().fromJson(reader, type);
+
+            if (rawData != null && !rawData.isEmpty()) {
+                // Convert to Map<Long, Set<UUID>>
+                Map<Long, Set<UUID>> converted = new HashMap<>();
+                for (Map.Entry<String, List<String>> entry : rawData.entrySet()) {
+                    try {
+                        Long claimId = Long.parseLong(entry.getKey());
+                        Set<UUID> uuids = new HashSet<>();
+                        for (String uuidStr : entry.getValue()) {
+                            try {
+                                uuids.add(UUID.fromString(uuidStr));
+                            } catch (IllegalArgumentException e) {
+                                Logger.logDebugInfo("Invalid UUID in claim-bans.json: " + uuidStr);
+                            }
+                        }
+                        if (!uuids.isEmpty()) {
+                            converted.put(claimId, uuids);
+                        }
+                    } catch (NumberFormatException e) {
+                        Logger.logDebugInfo("Invalid claim ID in claim-bans.json: " + entry.getKey());
+                    }
+                }
+
+                bannedClaimPlayers = converted;
                 Logger.logInfo("Loaded " + bannedClaimPlayers.size() + " claim ban entries from CosmosCore");
+
                 // Log the claim IDs for debugging
                 for (Map.Entry<Long, Set<UUID>> entry : bannedClaimPlayers.entrySet()) {
-                    Logger.logDebugInfo("Claim ID " + entry.getKey() + " has " + entry.getValue().size() + " banned players");
+                    Logger.logDebugInfo("Claim ID " + entry.getKey() + " has " + entry.getValue().size() + " banned players: " + entry.getValue());
                 }
             } else {
                 Logger.logDebugInfo("CosmosCore claim-bans.json was empty or invalid");
@@ -140,7 +167,7 @@ public class CosmosCorePlugin {
             // Check if there are any banned players for this claim
             Set<UUID> bannedPlayers = bannedClaimPlayers.get(claimId);
             if (bannedPlayers == null || bannedPlayers.isEmpty()) {
-                Logger.logDebugInfo("No banned players found for claim ID " + claimId);
+                Logger.logDebugInfo("No banned players found for claim ID " + claimId + " (loaded claims: " + bannedClaimPlayers.keySet() + ")");
                 return false;
             }
 
