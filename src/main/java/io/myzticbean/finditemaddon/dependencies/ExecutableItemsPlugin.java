@@ -18,6 +18,7 @@
  */
 package io.myzticbean.finditemaddon.dependencies;
 
+import io.myzticbean.finditemaddon.FindItemAddOn;
 import io.myzticbean.finditemaddon.utils.log.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -32,6 +33,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Integration with ExecutableItems plugin using reflection to avoid compile-time dependency
@@ -40,6 +44,8 @@ import java.util.Optional;
 public class ExecutableItemsPlugin {
 
     private boolean isExecutableItemsEnabled = false;
+    private final AtomicBoolean isLoading = new AtomicBoolean(false);
+    private final AtomicBoolean isLoaded = new AtomicBoolean(false);
     private Object eiManager = null;
 
     // Reflection cached methods
@@ -49,17 +55,19 @@ public class ExecutableItemsPlugin {
     private Method buildItemMethod = null;
     private Method getIdMethod = null;
 
+    // Thread-safe maps for concurrent access
     // Maps cleaned display name -> ExecutableItem ID
-    private final Map<String, String> displayNameToIdMap = new HashMap<>();
+    private final Map<String, String> displayNameToIdMap = new ConcurrentHashMap<>();
     // Maps ExecutableItem ID -> cleaned display name
-    private final Map<String, String> idToDisplayNameMap = new HashMap<>();
+    private final Map<String, String> idToDisplayNameMap = new ConcurrentHashMap<>();
     // List of autocomplete entries (custom:display_name)
-    private final List<String> autocompleteList = new ArrayList<>();
+    private final List<String> autocompleteList = new CopyOnWriteArrayList<>();
 
     public ExecutableItemsPlugin() {
         checkExecutableItemsPlugin();
         if (isExecutableItemsEnabled) {
-            loadExecutableItems();
+            // Load items asynchronously to not block server startup
+            loadExecutableItemsAsync();
         }
     }
 
@@ -91,6 +99,22 @@ public class ExecutableItemsPlugin {
     }
 
     /**
+     * Loads ExecutableItems asynchronously to prevent blocking server startup
+     */
+    private void loadExecutableItemsAsync() {
+        if (isLoading.compareAndSet(false, true)) {
+            Bukkit.getScheduler().runTaskAsynchronously(FindItemAddOn.getInstance(), () -> {
+                try {
+                    loadExecutableItems();
+                } finally {
+                    isLoading.set(false);
+                    isLoaded.set(true);
+                }
+            });
+        }
+    }
+
+    /**
      * Loads all ExecutableItems and creates the display name mappings
      */
     @SuppressWarnings("unchecked")
@@ -101,8 +125,9 @@ public class ExecutableItemsPlugin {
 
         try {
             List<String> itemIds = (List<String>) getExecutableItemIdsListMethod.invoke(eiManager);
-            Logger.logInfo("Loading " + itemIds.size() + " ExecutableItems for shop search...");
+            Logger.logInfo("Loading " + itemIds.size() + " ExecutableItems for shop search (async)...");
 
+            int loadedCount = 0;
             for (String itemId : itemIds) {
                 try {
                     Optional<?> eiOpt = (Optional<?>) getExecutableItemByIdMethod.invoke(eiManager, itemId);
@@ -125,20 +150,23 @@ public class ExecutableItemsPlugin {
                                 String displayName = meta.getDisplayName();
                                 String cleanedName = cleanDisplayName(displayName);
 
-                                displayNameToIdMap.put(cleanedName.toLowerCase(), itemId);
-                                idToDisplayNameMap.put(itemId, cleanedName);
-                                autocompleteList.add("custom:" + cleanedName);
+                                if (!cleanedName.isEmpty()) {
+                                    displayNameToIdMap.put(cleanedName.toLowerCase(), itemId);
+                                    idToDisplayNameMap.put(itemId, cleanedName);
+                                    autocompleteList.add("custom:" + cleanedName);
+                                    loadedCount++;
 
-                                Logger.logDebugInfo("Loaded ExecutableItem: " + itemId + " -> custom:" + cleanedName);
+                                    Logger.logDebugInfo("Loaded ExecutableItem: " + itemId + " -> custom:" + cleanedName);
+                                }
                             }
                         }
                     }
                 } catch (Exception e) {
-                    Logger.logError("Failed to load ExecutableItem: " + itemId + " - " + e.getMessage());
+                    Logger.logDebugInfo("Failed to load ExecutableItem: " + itemId + " - " + e.getMessage());
                 }
             }
 
-            Logger.logInfo("Loaded " + autocompleteList.size() + " ExecutableItems for autocomplete");
+            Logger.logInfo("Loaded " + loadedCount + " ExecutableItems for autocomplete");
         } catch (Exception e) {
             Logger.logError("Failed to load ExecutableItems list: " + e.getMessage());
         }
@@ -266,14 +294,22 @@ public class ExecutableItemsPlugin {
     }
 
     /**
+     * @return true if items have finished loading
+     */
+    public boolean isLoaded() {
+        return isLoaded.get();
+    }
+
+    /**
      * Reloads the ExecutableItems mappings
      */
     public void reload() {
         displayNameToIdMap.clear();
         idToDisplayNameMap.clear();
         autocompleteList.clear();
+        isLoaded.set(false);
         if (isExecutableItemsEnabled) {
-            loadExecutableItems();
+            loadExecutableItemsAsync();
         }
     }
 }
