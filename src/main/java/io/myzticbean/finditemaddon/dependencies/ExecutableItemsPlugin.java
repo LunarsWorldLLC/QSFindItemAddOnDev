@@ -18,9 +18,6 @@
  */
 package io.myzticbean.finditemaddon.dependencies;
 
-import com.ssomar.score.api.executableitems.ExecutableItemsAPI;
-import com.ssomar.score.api.executableitems.config.ExecutableItemInterface;
-import com.ssomar.score.api.executableitems.config.ExecutableItemsManagerInterface;
 import io.myzticbean.finditemaddon.utils.log.Logger;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -29,6 +26,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,13 +34,20 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Integration with ExecutableItems plugin
+ * Integration with ExecutableItems plugin using reflection to avoid compile-time dependency
  * @author myzticbean
  */
 public class ExecutableItemsPlugin {
 
     private boolean isExecutableItemsEnabled = false;
-    private ExecutableItemsManagerInterface eiManager = null;
+    private Object eiManager = null;
+
+    // Reflection cached methods
+    private Method getExecutableItemIdsListMethod = null;
+    private Method getExecutableItemByIdMethod = null;
+    private Method getExecutableItemFromItemStackMethod = null;
+    private Method buildItemMethod = null;
+    private Method getIdMethod = null;
 
     // Maps cleaned display name -> ExecutableItem ID
     private final Map<String, String> displayNameToIdMap = new HashMap<>();
@@ -61,50 +66,82 @@ public class ExecutableItemsPlugin {
     private void checkExecutableItemsPlugin() {
         Plugin plugin = Bukkit.getPluginManager().getPlugin("ExecutableItems");
         if (plugin != null && plugin.isEnabled()) {
-            isExecutableItemsEnabled = true;
-            eiManager = ExecutableItemsAPI.getExecutableItemsManager();
-            Logger.logInfo("ExecutableItems hooked!");
+            try {
+                // Use reflection to get the ExecutableItemsAPI and manager
+                Class<?> apiClass = Class.forName("com.ssomar.score.api.executableitems.ExecutableItemsAPI");
+                Method getManagerMethod = apiClass.getMethod("getExecutableItemsManager");
+                eiManager = getManagerMethod.invoke(null);
+
+                if (eiManager != null) {
+                    // Cache reflection methods for performance
+                    Class<?> managerClass = eiManager.getClass();
+                    getExecutableItemIdsListMethod = managerClass.getMethod("getExecutableItemIdsList");
+                    getExecutableItemByIdMethod = managerClass.getMethod("getExecutableItem", String.class);
+                    getExecutableItemFromItemStackMethod = managerClass.getMethod("getExecutableItem", ItemStack.class);
+
+                    isExecutableItemsEnabled = true;
+                    Logger.logInfo("ExecutableItems hooked!");
+                }
+            } catch (ClassNotFoundException e) {
+                Logger.logDebugInfo("ExecutableItems API not found - integration disabled");
+            } catch (Exception e) {
+                Logger.logWarning("Failed to hook ExecutableItems: " + e.getMessage());
+            }
         }
     }
 
     /**
      * Loads all ExecutableItems and creates the display name mappings
      */
+    @SuppressWarnings("unchecked")
     private void loadExecutableItems() {
         if (!isExecutableItemsEnabled || eiManager == null) {
             return;
         }
 
-        List<String> itemIds = eiManager.getExecutableItemIdsList();
-        Logger.logInfo("Loading " + itemIds.size() + " ExecutableItems for shop search...");
+        try {
+            List<String> itemIds = (List<String>) getExecutableItemIdsListMethod.invoke(eiManager);
+            Logger.logInfo("Loading " + itemIds.size() + " ExecutableItems for shop search...");
 
-        for (String itemId : itemIds) {
-            try {
-                Optional<ExecutableItemInterface> eiOpt = eiManager.getExecutableItem(itemId);
-                if (eiOpt.isPresent()) {
-                    ExecutableItemInterface ei = eiOpt.get();
-                    // Build the item to get its display name
-                    ItemStack item = ei.buildItem(1, Optional.empty(), Optional.empty());
-                    if (item != null && item.hasItemMeta()) {
-                        ItemMeta meta = item.getItemMeta();
-                        if (meta != null && meta.hasDisplayName()) {
-                            String displayName = meta.getDisplayName();
-                            String cleanedName = cleanDisplayName(displayName);
+            for (String itemId : itemIds) {
+                try {
+                    Optional<?> eiOpt = (Optional<?>) getExecutableItemByIdMethod.invoke(eiManager, itemId);
+                    if (eiOpt.isPresent()) {
+                        Object ei = eiOpt.get();
 
-                            displayNameToIdMap.put(cleanedName.toLowerCase(), itemId);
-                            idToDisplayNameMap.put(itemId, cleanedName);
-                            autocompleteList.add("custom:" + cleanedName);
+                        // Cache buildItem method if not already cached
+                        if (buildItemMethod == null) {
+                            buildItemMethod = ei.getClass().getMethod("buildItem", int.class, Optional.class, Optional.class);
+                        }
+                        if (getIdMethod == null) {
+                            getIdMethod = ei.getClass().getMethod("getId");
+                        }
 
-                            Logger.logDebugInfo("Loaded ExecutableItem: " + itemId + " -> custom:" + cleanedName);
+                        // Build the item to get its display name
+                        ItemStack item = (ItemStack) buildItemMethod.invoke(ei, 1, Optional.empty(), Optional.empty());
+                        if (item != null && item.hasItemMeta()) {
+                            ItemMeta meta = item.getItemMeta();
+                            if (meta != null && meta.hasDisplayName()) {
+                                String displayName = meta.getDisplayName();
+                                String cleanedName = cleanDisplayName(displayName);
+
+                                displayNameToIdMap.put(cleanedName.toLowerCase(), itemId);
+                                idToDisplayNameMap.put(itemId, cleanedName);
+                                autocompleteList.add("custom:" + cleanedName);
+
+                                Logger.logDebugInfo("Loaded ExecutableItem: " + itemId + " -> custom:" + cleanedName);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    Logger.logError("Failed to load ExecutableItem: " + itemId + " - " + e.getMessage());
                 }
-            } catch (Exception e) {
-                Logger.logError("Failed to load ExecutableItem: " + itemId + " - " + e.getMessage());
             }
-        }
 
-        Logger.logInfo("Loaded " + autocompleteList.size() + " ExecutableItems for autocomplete");
+            Logger.logInfo("Loaded " + autocompleteList.size() + " ExecutableItems for autocomplete");
+        } catch (Exception e) {
+            Logger.logError("Failed to load ExecutableItems list: " + e.getMessage());
+        }
     }
 
     /**
@@ -161,14 +198,24 @@ public class ExecutableItemsPlugin {
      * @param itemId The ExecutableItem ID to match
      * @return true if the ItemStack is the specified ExecutableItem
      */
+    @SuppressWarnings("unchecked")
     public boolean isExecutableItem(ItemStack itemStack, String itemId) {
         if (!isExecutableItemsEnabled || eiManager == null || itemStack == null) {
             return false;
         }
 
-        Optional<ExecutableItemInterface> eiOpt = eiManager.getExecutableItem(itemStack);
-        if (eiOpt.isPresent()) {
-            return eiOpt.get().getId().equalsIgnoreCase(itemId);
+        try {
+            Optional<?> eiOpt = (Optional<?>) getExecutableItemFromItemStackMethod.invoke(eiManager, itemStack);
+            if (eiOpt.isPresent()) {
+                Object ei = eiOpt.get();
+                if (getIdMethod == null) {
+                    getIdMethod = ei.getClass().getMethod("getId");
+                }
+                String foundId = (String) getIdMethod.invoke(ei);
+                return foundId != null && foundId.equalsIgnoreCase(itemId);
+            }
+        } catch (Exception e) {
+            Logger.logDebugInfo("Error checking ExecutableItem: " + e.getMessage());
         }
         return false;
     }
@@ -179,13 +226,25 @@ public class ExecutableItemsPlugin {
      * @return The ExecutableItem ID, or null if not an ExecutableItem
      */
     @Nullable
+    @SuppressWarnings("unchecked")
     public String getExecutableItemId(ItemStack itemStack) {
         if (!isExecutableItemsEnabled || eiManager == null || itemStack == null) {
             return null;
         }
 
-        Optional<ExecutableItemInterface> eiOpt = eiManager.getExecutableItem(itemStack);
-        return eiOpt.map(ExecutableItemInterface::getId).orElse(null);
+        try {
+            Optional<?> eiOpt = (Optional<?>) getExecutableItemFromItemStackMethod.invoke(eiManager, itemStack);
+            if (eiOpt.isPresent()) {
+                Object ei = eiOpt.get();
+                if (getIdMethod == null) {
+                    getIdMethod = ei.getClass().getMethod("getId");
+                }
+                return (String) getIdMethod.invoke(ei);
+            }
+        } catch (Exception e) {
+            Logger.logDebugInfo("Error getting ExecutableItem ID: " + e.getMessage());
+        }
+        return null;
     }
 
     /**
