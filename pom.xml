@@ -168,6 +168,10 @@
             <id>bentoboxworld</id>
             <url>https://repo.codemc.io/repository/bentoboxworld/</url>
         </repository>
+        <repository>
+            <id>score-repo</id>
+            <url>https://music.score.ssomar.com:8443/repository/maven-public/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -457,8 +461,7 @@
             <groupId>com.ssomar.score</groupId>
             <artifactId>SCore</artifactId>
             <version>4.24.1.15</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/SCore.jar</systemPath>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
