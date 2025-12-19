@@ -60,8 +60,6 @@ public class BuySubCmd extends SubCommand {
                     .toList());
             // Add enchanted book search options
             itemsList.addAll(EnchantedBookSearchUtil.getEnchantedBookAutocompleteList());
-            // Add custom item (ExecutableItems) search options
-            itemsList.addAll(CustomItemSearchUtil.getCustomItemAutocompleteList());
         }
         cmdExecutor = new CmdExecutorHandler();
     }
@@ -100,6 +98,12 @@ public class BuySubCmd extends SubCommand {
     public List<String> getSubcommandArguments(Player player, String[] args) {
         List<String> result = new ArrayList<>();
         for(String a : itemsList) {
+            if(a.toLowerCase().startsWith(args[1].toLowerCase())) {
+                result.add(a);
+            }
+        }
+        // Add custom items dynamically (ExecutableItems might load after plugin init)
+        for(String a : CustomItemSearchUtil.getCustomItemAutocompleteList()) {
             if(a.toLowerCase().startsWith(args[1].toLowerCase())) {
                 result.add(a);
             }

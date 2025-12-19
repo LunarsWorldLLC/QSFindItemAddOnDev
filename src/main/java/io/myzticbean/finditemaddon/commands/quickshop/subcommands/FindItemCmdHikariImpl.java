@@ -103,8 +103,6 @@ public class FindItemCmdHikariImpl implements CommandHandler<Player> {
             }
             // Add enchanted book search options
             itemsList.addAll(EnchantedBookSearchUtil.getEnchantedBookAutocompleteList());
-            // Add custom item (ExecutableItems) search options
-            itemsList.addAll(CustomItemSearchUtil.getCustomItemAutocompleteList());
         }
         if (buyOrSellList.isEmpty()) {
             // to-buy
@@ -140,6 +138,12 @@ public class FindItemCmdHikariImpl implements CommandHandler<Player> {
             return result;
         } else if (args.length == 2) {
             for (String a : itemsList) {
+                if (a.toLowerCase().startsWith(args[1].toLowerCase())) {
+                    result.add(a);
+                }
+            }
+            // Add custom items dynamically (ExecutableItems might load after plugin init)
+            for (String a : CustomItemSearchUtil.getCustomItemAutocompleteList()) {
                 if (a.toLowerCase().startsWith(args[1].toLowerCase())) {
                     result.add(a);
                 }
