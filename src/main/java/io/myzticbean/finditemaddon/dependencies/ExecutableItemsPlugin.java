@@ -147,6 +147,7 @@ public class ExecutableItemsPlugin {
     /**
      * Cleans a display name by:
      * - Stripping all color codes
+     * - Removing Unicode/emoji characters
      * - Replacing spaces with underscores
      * - Removing [ and ] characters
      * @param displayName The raw display name with color codes
@@ -159,6 +160,8 @@ public class ExecutableItemsPlugin {
         cleaned = cleaned.replaceAll("&[0-9a-fk-or]", "");
         // Also strip hex color codes like &#ffffff
         cleaned = cleaned.replaceAll("&#[0-9a-fA-F]{6}", "");
+        // Remove all non-ASCII characters (Unicode, emojis, etc.) - keep only basic letters, numbers, spaces
+        cleaned = cleaned.replaceAll("[^\\x20-\\x7E]", "");
         // Replace spaces with underscores
         cleaned = cleaned.replace(" ", "_");
         // Remove [ and ] characters
