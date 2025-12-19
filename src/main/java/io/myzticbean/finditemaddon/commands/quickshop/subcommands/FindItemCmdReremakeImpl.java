@@ -21,6 +21,8 @@ package io.myzticbean.finditemaddon.commands.quickshop.subcommands;
 import io.myzticbean.finditemaddon.FindItemAddOn;
 import io.myzticbean.finditemaddon.handlers.command.CmdExecutorHandler;
 import io.myzticbean.finditemaddon.models.enums.PlayerPermsEnum;
+import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
+import io.myzticbean.finditemaddon.utils.CustomItemSearchUtil;
 import me.kodysimpson.simpapi.colors.ColorTranslator;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Material;
@@ -90,6 +92,8 @@ public class FindItemCmdReremakeImpl implements CommandHandler<Player> {
             for(Material mat : Material.values()) {
                 itemsList.add(mat.name());
             }
+            // Add enchanted book search options
+            itemsList.addAll(EnchantedBookSearchUtil.getEnchantedBookAutocompleteList());
         }
         if(buyOrSellList.isEmpty()) {
             // to-buy
@@ -125,6 +129,12 @@ public class FindItemCmdReremakeImpl implements CommandHandler<Player> {
         }
         else if(args.length == 2) {
             for(String a : itemsList) {
+                if(a.toLowerCase().startsWith(args[1].toLowerCase())) {
+                    result.add(a);
+                }
+            }
+            // Add custom items dynamically (ExecutableItems might load after plugin init)
+            for(String a : CustomItemSearchUtil.getCustomItemAutocompleteList()) {
                 if(a.toLowerCase().startsWith(args[1].toLowerCase())) {
                     result.add(a);
                 }

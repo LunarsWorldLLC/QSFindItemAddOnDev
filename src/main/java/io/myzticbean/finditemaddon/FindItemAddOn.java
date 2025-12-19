@@ -26,6 +26,7 @@ import io.myzticbean.finditemaddon.commands.simpapi.SellSubCmd;
 import io.myzticbean.finditemaddon.config.ConfigProvider;
 import io.myzticbean.finditemaddon.config.ConfigSetup;
 import io.myzticbean.finditemaddon.dependencies.EssentialsXPlugin;
+import io.myzticbean.finditemaddon.dependencies.ExecutableItemsPlugin;
 import io.myzticbean.finditemaddon.dependencies.GriefPreventionPlugin;
 import io.myzticbean.finditemaddon.dependencies.PlayerWarpsPlugin;
 import io.myzticbean.finditemaddon.dependencies.ResidencePlugin;
@@ -109,6 +110,8 @@ public final class FindItemAddOn extends JavaPlugin {
     private static GriefPreventionPlugin griefPreventionPlugin;
     @Getter
     private static CosmosCorePlugin cosmosCorePlugin;
+    @Getter
+    private static ExecutableItemsPlugin executableItemsPlugin;
 
     private static final HashMap<Player, PlayerMenuUtility> playerMenuUtilityMap = new HashMap<>();
 
@@ -224,6 +227,7 @@ public final class FindItemAddOn extends JavaPlugin {
         bentoboxPlugin = new BentoBoxPlugin();
         griefPreventionPlugin = new GriefPreventionPlugin();
         cosmosCorePlugin = new CosmosCorePlugin();
+        executableItemsPlugin = new ExecutableItemsPlugin();
 
         initExternalPluginEventListeners();
 
