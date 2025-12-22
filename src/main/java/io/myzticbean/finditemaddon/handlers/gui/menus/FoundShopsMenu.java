@@ -186,7 +186,7 @@ public class FoundShopsMenu extends PaginatedMenu {
 
     /**
      * Handles direct teleportation to a shop
-     * 
+     *
      * @param player      The player to teleport
      * @param locDataList List containing location data
      */
@@ -209,8 +209,8 @@ public class FoundShopsMenu extends PaginatedMenu {
             return;
         }
 
-        // Find a safe location around the shop
-        Location locToTeleport = LocationUtils.findSafeLocationAroundShop(shopLocation, player);
+        // Find a location around the shop to teleport to
+        Location locToTeleport = LocationUtils.findLocationAroundShop(shopLocation);
         if (locToTeleport == null) {
             sendUnsafeAreaMessage(player);
             return;

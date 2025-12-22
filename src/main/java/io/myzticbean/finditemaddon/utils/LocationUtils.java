@@ -105,6 +105,87 @@ public class LocationUtils {
 
     }
 
+    /**
+     * Finds a location around the shop to teleport to without safety checks.
+     * Simply finds the shop sign and returns a location in front of it.
+     *
+     * @param shopLocation The location of the shop
+     * @return A location to teleport to, or null if no shop sign is found
+     */
+    @Nullable
+    public static Location findLocationAroundShop(Location shopLocation) {
+        Location roundedShopLoc = getRoundedDestination(shopLocation);
+        Logger.logDebugInfo("Rounded location: " + roundedShopLoc.getX() + ", " + roundedShopLoc.getY() + ", " + roundedShopLoc.getZ());
+        // Creating a list of four block locations in 4 sides of the shop
+        List<Location> possibleLocList = new ArrayList<>();
+        possibleLocList.add(new Location(
+                roundedShopLoc.getWorld(),
+                roundedShopLoc.getX() + 1,
+                roundedShopLoc.getY(),
+                roundedShopLoc.getZ()
+        ));
+        possibleLocList.add(new Location(
+                roundedShopLoc.getWorld(),
+                roundedShopLoc.getX() - 1,
+                roundedShopLoc.getY(),
+                roundedShopLoc.getZ()
+        ));
+        possibleLocList.add(new Location(
+                roundedShopLoc.getWorld(),
+                roundedShopLoc.getX(),
+                roundedShopLoc.getY(),
+                roundedShopLoc.getZ() + 1
+        ));
+        possibleLocList.add(new Location(
+                roundedShopLoc.getWorld(),
+                roundedShopLoc.getX(),
+                roundedShopLoc.getY(),
+                roundedShopLoc.getZ() - 1
+        ));
+        for (Location loc_i : possibleLocList) {
+            Logger.logDebugInfo("Possible location: " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
+            if (loc_i.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
+                Logger.logDebugInfo("Shop sign block found at " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
+                // Find a block below to stand on (without safety checks)
+                Location blockBelow = null;
+                for (int i = 1; i <= BELOW_SAFE_BLOCK_CHECK_LIMIT; i++) {
+                    blockBelow = new Location(
+                            loc_i.getWorld(),
+                            loc_i.getBlockX(),
+                            loc_i.getBlockY() - i,
+                            loc_i.getBlockZ()
+                    );
+                    Logger.logDebugInfo("Block below shop sign: "
+                            + blockBelow.getBlock().getType() + " " + blockBelow.getX() + ", " + blockBelow.getY() + ", " + blockBelow.getZ());
+                    if (blockBelow.getBlock().getType().equals(Material.AIR)
+                            || blockBelow.getBlock().getType().equals(Material.CAVE_AIR)
+                            || blockBelow.getBlock().getType().equals(Material.VOID_AIR)
+                            || blockBelow.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
+                        // do nothing and let the loop run
+                        Logger.logDebugInfo("Shop or Air found below");
+                    } else {
+                        // Found a solid block to stand on
+                        Logger.logDebugInfo("Block found to stand on!");
+                        break;
+                    }
+                }
+                if (blockBelow != null) {
+                    loc_i = lookAt(getRoundedDestination(new Location(
+                            blockBelow.getWorld(),
+                            blockBelow.getX(),
+                            blockBelow.getY() + 1,
+                            blockBelow.getZ()
+                    )), roundedShopLoc);
+                    return loc_i;
+                }
+            } else {
+                Logger.logDebugInfo("Block not shop sign. Block type: " + loc_i.getBlock().getType());
+            }
+        }
+        Logger.logDebugInfo("No location found near shop");
+        return null;
+    }
+
     @Nullable
     public static Location findSafeLocationAroundShop(Location shopLocation, Player player) {
         Location roundedShopLoc = getRoundedDestination(shopLocation);
