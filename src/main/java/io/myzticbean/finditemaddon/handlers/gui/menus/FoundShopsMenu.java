@@ -211,10 +211,6 @@ public class FoundShopsMenu extends PaginatedMenu {
 
         // Find a location around the shop to teleport to
         Location locToTeleport = LocationUtils.findLocationAroundShop(shopLocation);
-        if (locToTeleport == null) {
-            sendUnsafeAreaMessage(player);
-            return;
-        }
 
         // Record the visit and set last location for Essentials
         ShopSearchActivityStorageUtil.addPlayerVisitEntryAsync(shopLocation, player);
@@ -294,18 +290,6 @@ public class FoundShopsMenu extends PaginatedMenu {
         if (!StringUtils.isEmpty(configProvider.SHOP_TP_NO_PERMISSION_MSG)) {
             player.sendMessage(ColorTranslator.translateColorCodes(configProvider.PLUGIN_PREFIX
                     + configProvider.SHOP_TP_NO_PERMISSION_MSG));
-        }
-    }
-
-    /**
-     * Sends an unsafe area message to the player
-     * 
-     * @param player The player to send the message to
-     */
-    private void sendUnsafeAreaMessage(Player player) {
-        if (!StringUtils.isEmpty(configProvider.UNSAFE_SHOP_AREA_MSG)) {
-            player.sendMessage(ColorTranslator.translateColorCodes(configProvider.PLUGIN_PREFIX
-                    + configProvider.UNSAFE_SHOP_AREA_MSG));
         }
     }
 
