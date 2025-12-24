@@ -107,12 +107,12 @@ public class LocationUtils {
 
     /**
      * Finds a location around the shop to teleport to without safety checks.
-     * Simply finds the shop sign and returns a location in front of it.
+     * First tries to find the shop sign and returns a location in front of it.
+     * If no shop sign is found, falls back to teleporting on top of the shop.
      *
      * @param shopLocation The location of the shop
-     * @return A location to teleport to, or null if no shop sign is found
+     * @return A location to teleport to (never returns null)
      */
-    @Nullable
     public static Location findLocationAroundShop(Location shopLocation) {
         Location roundedShopLoc = getRoundedDestination(shopLocation);
         Logger.logDebugInfo("Rounded location: " + roundedShopLoc.getX() + ", " + roundedShopLoc.getY() + ", " + roundedShopLoc.getZ());
@@ -182,8 +182,15 @@ public class LocationUtils {
                 Logger.logDebugInfo("Block not shop sign. Block type: " + loc_i.getBlock().getType());
             }
         }
-        Logger.logDebugInfo("No location found near shop");
-        return null;
+        // Fallback: No shop sign found, teleport on top of the shop block
+        Logger.logDebugInfo("No shop sign found, falling back to teleporting on top of shop");
+        Location fallbackLoc = new Location(
+                roundedShopLoc.getWorld(),
+                roundedShopLoc.getX(),
+                roundedShopLoc.getY() + 1,
+                roundedShopLoc.getZ()
+        );
+        return lookAt(fallbackLoc, roundedShopLoc);
     }
 
     @Nullable
