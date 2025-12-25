@@ -107,12 +107,13 @@ public class LocationUtils {
 
     /**
      * Finds a location around the shop to teleport to without safety checks.
-     * First tries to find the shop sign and returns a location in front of it.
-     * If no shop sign is found, falls back to teleporting on top of the shop.
+     * Uses the same positioning logic as findSafeLocationAroundShop but skips
+     * safety validation (damaging blocks, suffocation checks).
      *
      * @param shopLocation The location of the shop
-     * @return A location to teleport to (never returns null)
+     * @return A location to teleport to, or null if no valid location found
      */
+    @Nullable
     public static Location findLocationAroundShop(Location shopLocation) {
         Location roundedShopLoc = getRoundedDestination(shopLocation);
         Logger.logDebugInfo("Rounded location: " + roundedShopLoc.getX() + ", " + roundedShopLoc.getY() + ", " + roundedShopLoc.getZ());
@@ -146,8 +147,9 @@ public class LocationUtils {
             Logger.logDebugInfo("Possible location: " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
             if (loc_i.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
                 Logger.logDebugInfo("Shop sign block found at " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
-                // Find a block below to stand on (without safety checks)
+                // Find a block below to stand on (same logic as safe version, but without safety checks)
                 Location blockBelow = null;
+                boolean groundFound = false;
                 for (int i = 1; i <= BELOW_SAFE_BLOCK_CHECK_LIMIT; i++) {
                     blockBelow = new Location(
                             loc_i.getWorld(),
@@ -157,19 +159,23 @@ public class LocationUtils {
                     );
                     Logger.logDebugInfo("Block below shop sign: "
                             + blockBelow.getBlock().getType() + " " + blockBelow.getX() + ", " + blockBelow.getY() + ", " + blockBelow.getZ());
-                    if (blockBelow.getBlock().getType().equals(Material.AIR)
-                            || blockBelow.getBlock().getType().equals(Material.CAVE_AIR)
-                            || blockBelow.getBlock().getType().equals(Material.VOID_AIR)
-                            || blockBelow.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
-                        // do nothing and let the loop run
-                        Logger.logDebugInfo("Shop or Air found below");
+                    Material blockType = blockBelow.getBlock().getType();
+                    if (blockType.equals(Material.AIR)
+                            || blockType.equals(Material.CAVE_AIR)
+                            || blockType.equals(Material.VOID_AIR)
+                            || blockType.equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())
+                            || blockType.equals(Material.CHEST)
+                            || blockType.equals(Material.TRAPPED_CHEST)) {
+                        // Continue searching - these are not valid ground blocks
+                        Logger.logDebugInfo("Air, sign, or chest found below - continuing search");
                     } else {
                         // Found a solid block to stand on
-                        Logger.logDebugInfo("Block found to stand on!");
+                        Logger.logDebugInfo("Ground block found to stand on!");
+                        groundFound = true;
                         break;
                     }
                 }
-                if (blockBelow != null) {
+                if (groundFound && blockBelow != null) {
                     loc_i = lookAt(getRoundedDestination(new Location(
                             blockBelow.getWorld(),
                             blockBelow.getX(),
@@ -182,15 +188,8 @@ public class LocationUtils {
                 Logger.logDebugInfo("Block not shop sign. Block type: " + loc_i.getBlock().getType());
             }
         }
-        // Fallback: No shop sign found, teleport on top of the shop block
-        Logger.logDebugInfo("No shop sign found, falling back to teleporting on top of shop");
-        Location fallbackLoc = new Location(
-                roundedShopLoc.getWorld(),
-                roundedShopLoc.getX(),
-                roundedShopLoc.getY() + 1,
-                roundedShopLoc.getZ()
-        );
-        return lookAt(fallbackLoc, roundedShopLoc);
+        Logger.logDebugInfo("No valid location found near shop");
+        return null;
     }
 
     @Nullable
