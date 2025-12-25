@@ -43,6 +43,14 @@ public class LocationUtils {
     private static final List<Material> nonSuffocatingBlocks = new ArrayList<>();
     private static final int BELOW_SAFE_BLOCK_CHECK_LIMIT = 20;
 
+    /**
+     * Checks if the given material is any type of wall sign.
+     * This handles all sign variants (oak, birch, pale_oak, etc.)
+     */
+    private static boolean isWallSign(Material material) {
+        return material.name().endsWith("_WALL_SIGN");
+    }
+
     static {
         // Initializing Damaging blocks
         damagingBlocks.add(Material.LAVA);
@@ -145,7 +153,7 @@ public class LocationUtils {
         ));
         for (Location loc_i : possibleLocList) {
             Logger.logDebugInfo("Possible location: " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
-            if (loc_i.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
+            if (isWallSign(loc_i.getBlock().getType())) {
                 Logger.logDebugInfo("Shop sign block found at " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
                 // Find a block below to stand on (same logic as safe version, but without safety checks)
                 Location blockBelow = null;
@@ -163,7 +171,7 @@ public class LocationUtils {
                     if (blockType.equals(Material.AIR)
                             || blockType.equals(Material.CAVE_AIR)
                             || blockType.equals(Material.VOID_AIR)
-                            || blockType.equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())
+                            || isWallSign(blockType)
                             || blockType.equals(Material.CHEST)
                             || blockType.equals(Material.TRAPPED_CHEST)) {
                         // Continue searching - these are not valid ground blocks
@@ -224,7 +232,7 @@ public class LocationUtils {
         ));
         for(Location loc_i : possibleSafeLocList) {
             Logger.logDebugInfo("Possible safe location: " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
-            if(loc_i.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
+            if(isWallSign(loc_i.getBlock().getType())) {
                 Logger.logDebugInfo("Shop sign block found at " + loc_i.getX() + ", " + loc_i.getY() + ", " + loc_i.getZ());
                 // Adding a check for a safe location check bypass permission
                 if(player.hasPermission(PlayerPermsEnum.FINDITEM_SHOPTP_BYPASS_SAFETYCHECK.value())) {
@@ -265,7 +273,7 @@ public class LocationUtils {
                         if(blockBelow.getBlock().getType().equals(Material.AIR)
                             || blockBelow.getBlock().getType().equals(Material.CAVE_AIR)
                             || blockBelow.getBlock().getType().equals(Material.VOID_AIR)
-                            || blockBelow.getBlock().getType().equals(FindItemAddOn.getQsApiInstance().getShopSignMaterial())) {
+                            || isWallSign(blockBelow.getBlock().getType())) {
                             // do nothing and let the loop run
                             Logger.logDebugInfo("Shop or Air found below");
                         }
