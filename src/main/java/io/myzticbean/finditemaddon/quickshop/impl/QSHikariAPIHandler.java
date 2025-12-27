@@ -136,8 +136,12 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
             double pricePerTransaction = price * itemAmount;
             Logger.logDebugInfo("Price per transaction: " + pricePerTransaction);
 
-            var economy = getQuickShop().getEconomy();
-            Logger.logDebugInfo("Got economy: " + economy.getClass().getSimpleName());
+            Logger.logDebugInfo("Getting QuickShop instance...");
+            var qs = getQuickShop();
+            Logger.logDebugInfo("Got QuickShop: " + qs);
+            Logger.logDebugInfo("Getting economy...");
+            var economy = qs.getEconomy();
+            Logger.logDebugInfo("Got economy: " + (economy != null ? economy.getClass().getSimpleName() : "NULL"));
             var qUser = shop.getOwner();
             Logger.logDebugInfo("Shop owner: " + qUser.getUsername());
             var uuid = qUser.getUniqueIdIfRealPlayer().orElse(null);
