@@ -86,11 +86,19 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
 
     public List<FoundShopItemModel> findItemBasedOnTypeFromAllShops(ItemStack item, boolean toBuy, Player searchingPlayer) {
         Logger.logDebugInfo(IS_MAIN_THREAD + Bukkit.isPrimaryThread());
+        Logger.logDebugInfo("Search mode: " + (toBuy ? "BUY (looking for selling shops)" : "SELL (looking for buying shops)"));
+        Logger.logDebugInfo("Searching for item type: " + item.getType());
         var begin = Instant.now();
         List<FoundShopItemModel> shopsFoundList = new ArrayList<>();
         List<Shop> allShops = fetchAllShopsFromQS();
         Logger.logDebugInfo(QS_TOTAL_SHOPS_ON_SERVER + allShops.size());
         for(Shop shopIterator : allShops) {
+            // Debug: Log each shop's type
+            Logger.logDebugInfo("Checking shop at " + shopIterator.getLocation() +
+                " | Item: " + shopIterator.getItem().getType() +
+                " | isSelling: " + shopIterator.isSelling() +
+                " | isBuying: " + shopIterator.isBuying());
+
             // check for quickshop hikari internal per-shop based search permission
             if(shopIterator.playerAuthorize(searchingPlayer.getUniqueId(), BuiltInShopPermission.SEARCH)
                     // check for blacklisted worlds
@@ -99,9 +107,11 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
                     && (toBuy ? shopIterator.isSelling() : shopIterator.isBuying()))
                     // check for shop if hidden
                     && (!HiddenShopStorageUtil.isShopHidden(shopIterator))) {
+                Logger.logDebugInfo("Shop passed all filters, processing...");
                 processPotentialShopMatchAndAddToFoundList(toBuy, shopIterator, shopsFoundList, searchingPlayer);
             }
         }
+        Logger.logDebugInfo("Total shops found after filtering: " + shopsFoundList.size());
         List<FoundShopItemModel> sortedShops = handleShopSorting(toBuy, shopsFoundList);
         QSApi.logTimeTookMsg(begin);
         return sortedShops;
@@ -113,20 +123,24 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
      * @return true if owner has enough balance, false otherwise
      */
     private static boolean isOwnerHavingEnoughBalance(@NotNull Shop shop) {
+        Logger.logDebugInfo("Checking owner balance for shop at " + shop.getLocation());
         // Skip check for admin shops
         if (shop.getOwner().getUniqueIdOptional().isEmpty()) {
+            Logger.logDebugInfo("Admin shop - skipping balance check");
             return true;
         }
 
         double price = shop.getPrice();
         double itemAmount = shop.getItem().getAmount();
         double pricePerTransaction = price * itemAmount;
+        Logger.logDebugInfo("Price per transaction: " + pricePerTransaction);
 
         var economy = getQuickShop().getEconomy();
         var qUser = shop.getOwner();
         var uuid = qUser.getUniqueIdIfRealPlayer().orElse(null);
         // return true if not a real player
         if(Objects.isNull(uuid)) {
+            Logger.logDebugInfo("Not a real player - skipping balance check");
             return true;
         }
         // Use the shop's world for balance check - player may be offline so getLocation() would return null
@@ -138,7 +152,10 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
         var currency = shop.getCurrency();
 
         // Get owner's balance through QuickShop API
-        return economy.getBalance(qUser, world, currency) >= pricePerTransaction;
+        double ownerBalance = economy.getBalance(qUser, world, currency);
+        boolean hasEnough = ownerBalance >= pricePerTransaction;
+        Logger.logDebugInfo("Owner: " + shop.getOwner().getUsername() + " | Balance: " + ownerBalance + " | Required: " + pricePerTransaction + " | Has enough: " + hasEnough);
+        return hasEnough;
     }
 
     private static QuickShop getQuickShop() {
@@ -543,12 +560,14 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
         // check for stock / space
         int stockOrSpace = (toBuy ? getRemainingStockOrSpaceFromShopCache(shopIterator, true)
                 : getRemainingStockOrSpaceFromShopCache(shopIterator, false));
+        Logger.logDebugInfo("Shop " + (toBuy ? "stock" : "space") + ": " + stockOrSpace);
         if(isShopToBeIgnoredForFullOrEmpty(stockOrSpace)) {
+            Logger.logDebugInfo("Shop ignored due to empty " + (toBuy ? "stock" : "space"));
             return;
         }
         // check if owner has enough balance for buying shops
         if(!toBuy && !isOwnerHavingEnoughBalance(shopIterator)) {
-            Logger.logDebugInfo("Shop Owner is poor");
+            Logger.logDebugInfo("Shop Owner is poor - filtering out shop");
             return;
         }
         shopsFoundList.add(new FoundShopItemModel(
