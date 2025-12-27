@@ -58,12 +58,20 @@ public class CmdExecutorHandler {
      * @param itemArg Specifies Item ID or Item name
      */
     public void handleShopSearch(String buySellSubCommand, CommandSender commandSender, String itemArg) {
+        Logger.logDebugInfo("handleShopSearch called with subCommand: " + buySellSubCommand + ", itemArg: " + itemArg);
+
         if (!(commandSender instanceof Player player)) {
             Logger.logInfo(THIS_COMMAND_CAN_ONLY_BE_RUN_FROM_IN_GAME);
             return;
         }
         if (!player.hasPermission(PlayerPermsEnum.FINDITEM_USE.value())) {
             player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + NO_PERMISSION));
+            return;
+        }
+
+        // Check if plugin is still enabled (for PlugMan compatibility)
+        if (!FindItemAddOn.getInstance().isEnabled()) {
+            Logger.logDebugInfo("Plugin is disabled, aborting search");
             return;
         }
 
@@ -80,6 +88,7 @@ public class CmdExecutorHandler {
         else {
             isBuying = buySellSubCommand.equalsIgnoreCase(FindItemAddOn.getConfigProvider().FIND_ITEM_TO_BUY_AUTOCOMPLETE);
         }
+        Logger.logDebugInfo("isBuying determined as: " + isBuying + " (config buy autocomplete: " + FindItemAddOn.getConfigProvider().FIND_ITEM_TO_BUY_AUTOCOMPLETE + ")");
 
         if(itemArg.equalsIgnoreCase("*") && !FindItemAddOn.getConfigProvider().FIND_ITEM_CMD_DISABLE_SEARCH_ALL_SHOPS) {
             // If QS Hikari installed and Shop Cache feature available (>6), then run in async thread (Fix for Issue #12)
