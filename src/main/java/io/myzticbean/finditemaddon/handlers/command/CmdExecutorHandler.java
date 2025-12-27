@@ -69,12 +69,6 @@ public class CmdExecutorHandler {
             return;
         }
 
-        // Check if plugin is still enabled (for PlugMan compatibility)
-        if (!FindItemAddOn.getInstance().isEnabled()) {
-            Logger.logDebugInfo("Plugin is disabled, aborting search");
-            return;
-        }
-
         // Show searching... message
         if (!StringUtils.isEmpty(FindItemAddOn.getConfigProvider().SHOP_SEARCH_LOADING_MSG)) {
             player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + FindItemAddOn.getConfigProvider().SHOP_SEARCH_LOADING_MSG));
