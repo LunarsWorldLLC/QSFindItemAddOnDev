@@ -123,39 +123,53 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
      * @return true if owner has enough balance, false otherwise
      */
     private static boolean isOwnerHavingEnoughBalance(@NotNull Shop shop) {
-        Logger.logDebugInfo("Checking owner balance for shop at " + shop.getLocation());
-        // Skip check for admin shops
-        if (shop.getOwner().getUniqueIdOptional().isEmpty()) {
-            Logger.logDebugInfo("Admin shop - skipping balance check");
+        try {
+            Logger.logDebugInfo("Checking owner balance for shop at " + shop.getLocation());
+            // Skip check for admin shops
+            if (shop.getOwner().getUniqueIdOptional().isEmpty()) {
+                Logger.logDebugInfo("Admin shop - skipping balance check");
+                return true;
+            }
+
+            double price = shop.getPrice();
+            double itemAmount = shop.getItem().getAmount();
+            double pricePerTransaction = price * itemAmount;
+            Logger.logDebugInfo("Price per transaction: " + pricePerTransaction);
+
+            var economy = getQuickShop().getEconomy();
+            Logger.logDebugInfo("Got economy: " + economy.getClass().getSimpleName());
+            var qUser = shop.getOwner();
+            Logger.logDebugInfo("Shop owner: " + qUser.getUsername());
+            var uuid = qUser.getUniqueIdIfRealPlayer().orElse(null);
+            // return true if not a real player
+            if(Objects.isNull(uuid)) {
+                Logger.logDebugInfo("Not a real player - skipping balance check");
+                return true;
+            }
+            Logger.logDebugInfo("Owner UUID: " + uuid);
+            // Use the shop's world for balance check - player may be offline so getLocation() would return null
+            var world = shop.getLocation().getWorld();
+            if(Objects.isNull(world)) {
+                Logger.logError("Shop world is null - ShopInfo: " + shop.getOwner().getUsername());
+                return true;
+            }
+            Logger.logDebugInfo("World: " + world.getName());
+            var currency = shop.getCurrency();
+            Logger.logDebugInfo("Currency: " + currency);
+
+            // Get owner's balance through QuickShop API
+            Logger.logDebugInfo("About to call economy.getBalance()...");
+            double ownerBalance = economy.getBalance(qUser, world, currency);
+            Logger.logDebugInfo("Balance retrieved: " + ownerBalance);
+            boolean hasEnough = ownerBalance >= pricePerTransaction;
+            Logger.logDebugInfo("Owner: " + shop.getOwner().getUsername() + " | Balance: " + ownerBalance + " | Required: " + pricePerTransaction + " | Has enough: " + hasEnough);
+            return hasEnough;
+        } catch (Exception e) {
+            Logger.logError("Exception in isOwnerHavingEnoughBalance: " + e.getMessage());
+            e.printStackTrace();
+            // Return true to not filter out shops due to balance check errors
             return true;
         }
-
-        double price = shop.getPrice();
-        double itemAmount = shop.getItem().getAmount();
-        double pricePerTransaction = price * itemAmount;
-        Logger.logDebugInfo("Price per transaction: " + pricePerTransaction);
-
-        var economy = getQuickShop().getEconomy();
-        var qUser = shop.getOwner();
-        var uuid = qUser.getUniqueIdIfRealPlayer().orElse(null);
-        // return true if not a real player
-        if(Objects.isNull(uuid)) {
-            Logger.logDebugInfo("Not a real player - skipping balance check");
-            return true;
-        }
-        // Use the shop's world for balance check - player may be offline so getLocation() would return null
-        var world = shop.getLocation().getWorld();
-        if(Objects.isNull(world)) {
-            Logger.logError("Shop world is null - ShopInfo: " + shop.getOwner().getUsername());
-            return true;
-        }
-        var currency = shop.getCurrency();
-
-        // Get owner's balance through QuickShop API
-        double ownerBalance = economy.getBalance(qUser, world, currency);
-        boolean hasEnough = ownerBalance >= pricePerTransaction;
-        Logger.logDebugInfo("Owner: " + shop.getOwner().getUsername() + " | Balance: " + ownerBalance + " | Required: " + pricePerTransaction + " | Has enough: " + hasEnough);
-        return hasEnough;
     }
 
     private static QuickShop getQuickShop() {
