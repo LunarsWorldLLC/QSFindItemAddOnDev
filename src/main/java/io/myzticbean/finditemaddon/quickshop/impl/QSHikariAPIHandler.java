@@ -168,8 +168,8 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
             boolean hasEnough = ownerBalance >= pricePerTransaction;
             Logger.logDebugInfo("Owner: " + shop.getOwner().getUsername() + " | Balance: " + ownerBalance + " | Required: " + pricePerTransaction + " | Has enough: " + hasEnough);
             return hasEnough;
-        } catch (Exception e) {
-            Logger.logError("Exception in isOwnerHavingEnoughBalance: " + e.getMessage());
+        } catch (Throwable e) {
+            Logger.logError("Exception in isOwnerHavingEnoughBalance: " + e.getClass().getName() + " - " + e.getMessage());
             e.printStackTrace();
             // Return true to not filter out shops due to balance check errors
             return true;
