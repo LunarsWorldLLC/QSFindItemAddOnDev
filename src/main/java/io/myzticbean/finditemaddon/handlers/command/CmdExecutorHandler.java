@@ -112,9 +112,11 @@ public class CmdExecutorHandler {
                     } catch (Exception e) {
                         Logger.logError("Error during enchanted book search: " + e.getMessage());
                         e.printStackTrace();
-                        Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
-                            player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
-                        });
+                        if (FindItemAddOn.getInstance().isEnabled()) {
+                            Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                            });
+                        }
                     }
                 });
             } else {
@@ -143,9 +145,11 @@ public class CmdExecutorHandler {
                     } catch (Exception e) {
                         Logger.logError("Error during custom item search: " + e.getMessage());
                         e.printStackTrace();
-                        Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
-                            player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
-                        });
+                        if (FindItemAddOn.getInstance().isEnabled()) {
+                            Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                            });
+                        }
                     }
                 });
             } else {
@@ -169,9 +173,11 @@ public class CmdExecutorHandler {
                         } catch (Exception e) {
                             Logger.logError("Error during shop search: " + e.getMessage());
                             e.printStackTrace();
-                            Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
-                                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
-                            });
+                            if (FindItemAddOn.getInstance().isEnabled()) {
+                                Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                                    player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                                });
+                            }
                         }
                     });
                 } else {
@@ -189,9 +195,11 @@ public class CmdExecutorHandler {
                         } catch (Exception e) {
                             Logger.logError("Error during shop search: " + e.getMessage());
                             e.printStackTrace();
-                            Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
-                                player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
-                            });
+                            if (FindItemAddOn.getInstance().isEnabled()) {
+                                Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
+                                    player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cAn error occurred during search. Check console for details."));
+                                });
+                            }
                         }
                     });
                 } else {
@@ -203,6 +211,11 @@ public class CmdExecutorHandler {
     }
 
     private void openShopMenu(Player player, List<FoundShopItemModel> searchResultList, boolean synchronize, String errorMsg) {
+        // Check if plugin is still enabled (for PlugMan compatibility)
+        if (!FindItemAddOn.getInstance().isEnabled()) {
+            Logger.logDebugInfo("Plugin disabled, skipping menu open");
+            return;
+        }
         if (!searchResultList.isEmpty()) {
             if (synchronize) {
                 Bukkit.getScheduler().runTask(FindItemAddOn.getInstance(), () -> {
