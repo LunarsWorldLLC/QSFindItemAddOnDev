@@ -129,10 +129,10 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
         if(Objects.isNull(uuid)) {
             return true;
         }
-        var bukkitPlayer = Bukkit.getOfflinePlayer(uuid);
-        var world = bukkitPlayer.getLocation().getWorld();
+        // Use the shop's world for balance check - player may be offline so getLocation() would return null
+        var world = shop.getLocation().getWorld();
         if(Objects.isNull(world)) {
-            Logger.logError("Shop owner hasn't played before ever in the server (?) - ShopInfo: " + shop.getOwner().getUsername());
+            Logger.logError("Shop world is null - ShopInfo: " + shop.getOwner().getUsername());
             return true;
         }
         var currency = shop.getCurrency();
