@@ -139,8 +139,8 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
             Logger.logDebugInfo("Getting QuickShop instance...");
             var qs = getQuickShop();
             Logger.logDebugInfo("Got QuickShop: " + qs);
-            Logger.logDebugInfo("Getting economy...");
-            var economy = qs.getEconomy();
+            Logger.logDebugInfo("Getting economy via EconomyManager...");
+            var economy = qs.getEconomyManager().provider();
             Logger.logDebugInfo("Got economy: " + (economy != null ? economy.getClass().getSimpleName() : "NULL"));
             var qUser = shop.getOwner();
             Logger.logDebugInfo("Shop owner: " + qUser.getUsername());
@@ -162,8 +162,8 @@ public class QSHikariAPIHandler implements QSApi<QuickShop, Shop> {
             Logger.logDebugInfo("Currency: " + currency);
 
             // Get owner's balance through QuickShop API
-            Logger.logDebugInfo("About to call economy.getBalance()...");
-            double ownerBalance = economy.getBalance(qUser, world, currency);
+            Logger.logDebugInfo("About to call economy.balance()...");
+            double ownerBalance = economy.balance(qUser, world.getName(), currency).doubleValue();
             Logger.logDebugInfo("Balance retrieved: " + ownerBalance);
             boolean hasEnough = ownerBalance >= pricePerTransaction;
             Logger.logDebugInfo("Owner: " + shop.getOwner().getUsername() + " | Balance: " + ownerBalance + " | Required: " + pricePerTransaction + " | Has enough: " + hasEnough);
