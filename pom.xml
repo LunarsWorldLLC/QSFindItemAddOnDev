@@ -207,78 +207,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!-- Custom QuickShop-Hikari with EconomyManager API -->
         <dependency>
             <groupId>com.ghostchu</groupId>
-            <artifactId>quickshop-api</artifactId>
+            <artifactId>quickshop-hikari</artifactId>
             <version>${qs-hikari.version}</version>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jetbrains</groupId>
-                    <artifactId>annotations</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.kyori</groupId>
-                    <artifactId>adventure-platform-bukkit</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.github.juliomarcopineda</groupId>
-                    <artifactId>jdbc-stream</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>one.util</groupId>
-                    <artifactId>streamex</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>tne.tne</groupId>
-                    <artifactId>TheNewEconomy</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>me.xanium</groupId>
-                    <artifactId>GemsEconomy</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.ghostchu</groupId>
-                    <artifactId>quickshop-common</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.ghostchu</groupId>
-            <artifactId>quickshop-bukkit</artifactId>
-            <version>${qs-hikari.version}</version>
-            <scope>provided</scope>
-            <classifier>shaded</classifier>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jetbrains</groupId>
-                    <artifactId>annotations</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>net.kyori</groupId>
-                    <artifactId>adventure-platform-bukkit</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.github.juliomarcopineda</groupId>
-                    <artifactId>jdbc-stream</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>one.util</groupId>
-                    <artifactId>streamex</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>tne.tne</groupId>
-                    <artifactId>TheNewEconomy</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>me.xanium</groupId>
-                    <artifactId>GemsEconomy</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.ghostchu</groupId>
-                    <artifactId>quickshop-common</artifactId>
-                </exclusion>
-            </exclusions>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/QuickShop-Hikari-6.2.0.11-SNAPSHOT-11.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>net.essentialsx</groupId>
