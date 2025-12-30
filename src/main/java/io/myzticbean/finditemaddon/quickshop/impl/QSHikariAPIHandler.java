@@ -18,7 +18,7 @@
  */
 package io.myzticbean.finditemaddon.quickshop.impl;
 
-import cc.carm.lib.easysql.api.SQLQuery;
+import com.ghostchu.quickshop.shade.carm.easysql.api.SQLQuery;
 import com.ghostchu.quickshop.QuickShop;
 import com.ghostchu.quickshop.QuickShopBukkit;
 import com.ghostchu.quickshop.api.QuickShopAPI;
