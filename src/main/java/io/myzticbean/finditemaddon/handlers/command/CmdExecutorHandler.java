@@ -29,6 +29,7 @@ import io.myzticbean.finditemaddon.utils.log.Logger;
 import io.myzticbean.finditemaddon.utils.warp.WarpUtils;
 import io.myzticbean.finditemaddon.utils.EnchantedBookSearchUtil;
 import io.myzticbean.finditemaddon.utils.CustomItemSearchUtil;
+import io.myzticbean.finditemaddon.utils.ItemAliasUtil;
 import me.kodysimpson.simpapi.colors.ColorTranslator;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
@@ -160,7 +161,7 @@ public class CmdExecutorHandler {
                 this.openShopMenu(player, searchResultList, false, FindItemAddOn.getConfigProvider().NO_SHOP_FOUND_MSG);
             }
         } else {
-            Material mat = Material.getMaterial(itemArg.toUpperCase());
+            Material mat = ItemAliasUtil.resolveMaterial(itemArg);
             if(this.checkMaterialBlacklist(mat)) {
                 player.sendMessage(ColorTranslator.translateColorCodes(FindItemAddOn.getConfigProvider().PLUGIN_PREFIX + "&cThis material is not allowed."));
                 return;
